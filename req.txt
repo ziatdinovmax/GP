@@ -11,3 +11,4 @@ pydot==1.3.0
 torchviz==0.0.1
 gdown==3.8.1
 pyro-ppl==0.4.1
+nanonispy==1.0.6
