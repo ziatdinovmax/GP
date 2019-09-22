@@ -7,6 +7,7 @@ import torch
 import pyro
 import pyro.contrib.gp as gp
 import pyro.distributions as dist
+import gprutils
 
 
 def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=True, **kwargs):
@@ -188,7 +189,7 @@ def sgpr_predict(model, Xtest, use_gpu=True, num_batches=10):
     """
 
     # Prepare for inference
-    #Xtest = Xtest.reshape(3, Xtest.shape[1]*Xtest.shape[2]*Xtest.shape[3]).T
+    Xtest = prepare_test_data(Xtest)
     batch_range = len(Xtest) // num_batches
     mean = np.zeros((Xtest.shape[0]))
     sd = np.zeros((Xtest.shape[0]))
@@ -207,3 +208,51 @@ def sgpr_predict(model, Xtest, use_gpu=True, num_batches=10):
         model.cpu()
 
     return mean, sd
+
+
+def exploration_step(X, R, X_true, dist_edge, learning_rate=.1):
+    """
+    Finds new point with maximum uncertainty
+
+    Args:
+        X:  c x  N x M x L ndarray
+            Grid indices for initial partial observations
+            c is equal to the number of coordinate dimensions.
+            For example, for xyz coordinates, c = 3.
+            Missing points are NaNs.
+        R: N x M x L ndarray
+            Observations (data points).
+            Missing data points are NaNs.
+        X_true:  c x  N x M x L ndarray
+            Grid indices for full observations (i.e. without NaNs)
+            The dimensions are equal to those of X
+        dist_edge: list with two integers
+            edge regions not considered for max uncertainty evaluation
+        learning_rate: float
+            learning rate for GPR model training
+
+    Returns:
+        list indices of point with maximum uncertainty
+
+    """
+    e1, e2, e3 = R.shape
+    # pre-process data
+    X_tor, R_tor = gprutils.prepare_training_data(X, R)
+    # use different bounds on lengthscale at the very beginning
+    lscale = None if i < 10 else [[4., 4., 2.5], [5., 5., 5.]]
+    # train a model
+    model, losses = train_sgpr_model(
+        X_tor, R_tor, get_kernel(
+            'RationalQuadratic', len_dim=1, lengthscale=lscale),
+        learning_rate=learning_rate, steps=1500, use_gpu=1, verbose=1
+        )
+    # make prediction
+    mean, sd = sgpr_predict(
+        model, gprutils.prepare_test_data(X_true),
+        use_gpu=False, num_batches=100
+        )
+    # find point with maximum uncertainty
+    sd = sd.reshape(e1, e2, e3)
+    amax = gprutils.max_uncertainty(sd, dist_edge)
+
+    return amax, mean, sd
