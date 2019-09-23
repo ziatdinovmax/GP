@@ -1,2 +1,2 @@
 # GP
-Gaussian processes for microscopic measurements
+Gaussian processes for microscopic measurements (so far running "synthetic experiments")
