@@ -1,9 +1,12 @@
 # Utility functions
 # Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
+import os
 import numpy as np
 import torch
 import pyro
+import matplotlib.pyplot as plt
+
 
 def max_uncertainty(sd, dist_edge):
     """
@@ -19,6 +22,7 @@ def max_uncertainty(sd, dist_edge):
         list of indices corresponding to the max uncertainty point
     """
     # sum along the last dimension
+    e1, e2 = sd.shape[:2]
     sd = np.sum(sd, axis=-1)
     # mask the edges
     mask = np.zeros(sd.shape, bool)
@@ -32,18 +36,43 @@ def max_uncertainty(sd, dist_edge):
         amax_list.append(amax)
         uncert_list.append(sd.max())
         sd[amax[0], amax[1]] = 0
+
+    return amax_list, uncert_list
+
+
+def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list):
+    """
+    Checks if the indices were already used
+    (helps not to get stuck in one point)
+
+    Args:
+        uncert_idx_list: list of lists with integers
+            indices of max uncertainty points for one measurement;
+            the list is ordered (max uncertainty -> min uncertainty)
+        uncert_idx_all: list of lists with integers
+            indices of the already selected points from previous measurements
+        uncert_val_list: list with floats
+            SD values for each index in uncert_idx_list
+            (ordered as max uncertainty -> min uncertainty)
+
+    Returns:
+        If no previous occurences found,
+        returns the first element in the input list (uncert_idx_list).
+        Otherwise, returns the next/closest value from the list.
+    """
+
     _idx = 0
     print('Maximum uncertainty of {} at {}'.format(
-        uncert_list[_idx], amax_list[_idx]))
-    # some safeguards
-    while i > 0 and 1 in [1 for a in amax_all if a == amax_list[_idx]]:
+        uncert_val_list[_idx], uncert_idx_list[_idx]))
+    if len(uncert_idx_all) == 0:
+        return uncert_idx_list[_idx], uncert_val_list[_idx]
+    while 1 in [1 for a in uncert_idx_all if a == uncert_idx_list[_idx]]:
         print("Finding the next max point...")
         _idx = _idx + 1
         print('Maximum uncertainty of {} at {}'.format(
-            uncert_list[_idx], amax_list[_idx]))
-    amax = amax_list[_idx]
+            uncert_val_list[_idx], uncert_idx_list[_idx]))
+    return uncert_idx_list[_idx], uncert_val_list[_idx]
 
-    return amax
 
 def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     """
@@ -67,6 +96,7 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
         measure: int
             half of measurement square
     """
+    print(uncertmax)
     a0, a1 = uncertmax
     # make "observation"
     R_obs = R_true[a0-measure:a0+measure, a1-measure:a1+measure, :]
@@ -75,7 +105,7 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     R[a0-measure:a0+measure, a1-measure:a1+measure, :] = R_obs
     X[:, a0-measure:a0+measure, a1-measure:a1+measure, :] = X_obs
     return R, X
-    
+
 
 def prepare_training_data(X, y):
     """
@@ -156,3 +186,4 @@ def corrupt_data_xy(X_true, R_true, prob=0.5):
     X[:, indices, :] = np.nan
     X = X.reshape(3, e1, e2, e3)
     return X, R
+

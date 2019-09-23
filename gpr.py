@@ -10,7 +10,7 @@ import pyro.distributions as dist
 import gprutils
 
 
-def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=True, **kwargs):
+def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
     """
     Initalizes one of the following kernels:
     RBF, Rational Quadratic, Matern, Periodic kernel
@@ -47,7 +47,7 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=True, **kwargs):
     len_dim = kwargs.get('len_dim') if 'len_dim' in kwargs else input_dim
     lscale = kwargs.get('lengthscale')
     if lscale is None:
-        lscale = [[.1 for l in range(len_dim)], [20. for l in range(len_dim)]]
+        lscale = [[1. for l in range(len_dim)], [20. for l in range(len_dim)]]
     lscale_ = torch.tensor(lscale[0]) + 1e-5
 
     # initialize the kernel
@@ -89,7 +89,7 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=True, **kwargs):
 
 
 def train_sgpr_model(X, y, kernel, learning_rate=5e-2, steps=1000,
-                    use_gpu=True, verbose=False):
+                    use_gpu=False, verbose=False):
     """
     Training sparse GP regression model
 
@@ -122,7 +122,7 @@ def train_sgpr_model(X, y, kernel, learning_rate=5e-2, steps=1000,
     indpoints = 150 if indpoints > 150 else indpoints
     indpoints = 20 if indpoints == 0 else indpoints
     Xu = X[::len(X) // indpoints]
-    print("Number of inducing points: {}".format(len(Xu)))
+    print("Number of inducing points for GP regression: {}".format(len(Xu)))
     if use_gpu:
         X = X.cuda()
         y = y.cuda()
@@ -136,6 +136,7 @@ def train_sgpr_model(X, y, kernel, learning_rate=5e-2, steps=1000,
     losses = []
     num_steps = steps
     start_time = time.time()
+    print('Model training...')
     for i in range(num_steps):
         optimizer.zero_grad()
         loss = loss_fn(sgpr.model, sgpr.guide)
@@ -168,7 +169,7 @@ def train_sgpr_model(X, y, kernel, learning_rate=5e-2, steps=1000,
 
     return sgpr, losses
 
-def sgpr_predict(model, Xtest, use_gpu=True, num_batches=10):
+def sgpr_predict(model, Xtest, use_gpu=False, num_batches=10):
     """
     Use trained GPRegression model to make predictions
 
@@ -187,9 +188,8 @@ def sgpr_predict(model, Xtest, use_gpu=True, num_batches=10):
     Returns:
         predictive mean and variance
     """
-
+    print("Making prediction with the trained model...")
     # Prepare for inference
-    Xtest = prepare_test_data(Xtest)
     batch_range = len(Xtest) // num_batches
     mean = np.zeros((Xtest.shape[0]))
     sd = np.zeros((Xtest.shape[0]))
@@ -210,7 +210,9 @@ def sgpr_predict(model, Xtest, use_gpu=True, num_batches=10):
     return mean, sd
 
 
-def exploration_step(X, R, X_true, dist_edge, learning_rate=.1):
+def exploration_step(X, R, X_true, dist_edge, lscale,
+                     learning_rate=.1, steps=200,
+                     use_gpu=0, verbose=1):
     """
     Finds new point with maximum uncertainty
 
@@ -238,21 +240,20 @@ def exploration_step(X, R, X_true, dist_edge, learning_rate=.1):
     e1, e2, e3 = R.shape
     # pre-process data
     X_tor, R_tor = gprutils.prepare_training_data(X, R)
-    # use different bounds on lengthscale at the very beginning
-    lscale = None if i < 10 else [[4., 4., 2.5], [5., 5., 5.]]
     # train a model
     model, losses = train_sgpr_model(
         X_tor, R_tor, get_kernel(
             'RationalQuadratic', len_dim=1, lengthscale=lscale),
-        learning_rate=learning_rate, steps=1500, use_gpu=1, verbose=1
+        learning_rate=learning_rate, steps=steps,
+        use_gpu=use_gpu, verbose=verbose
         )
     # make prediction
     mean, sd = sgpr_predict(
         model, gprutils.prepare_test_data(X_true),
-        use_gpu=False, num_batches=100
+        use_gpu=use_gpu, num_batches=100
         )
     # find point with maximum uncertainty
     sd = sd.reshape(e1, e2, e3)
-    amax = gprutils.max_uncertainty(sd, dist_edge)
+    amax, uncert_list = gprutils.max_uncertainty(sd, dist_edge)
 
-    return amax, mean, sd
+    return amax, uncert_list
