@@ -13,11 +13,11 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 # Number of exploratory steps
 ESTEPS = 40
 # Number of steps for a single model training
-STEPS = 1000
+STEPS = 1500
 # Type of kernel
 KERNEL = 'RationalQuadratic'
 # Bounds on priors
-LENGTH_CONSTR = [[1., 1., 1.], [40., 40., 40.]]
+LENGTH_CONSTR = [[1., 1., 1.], [10., 10., 10.]]
 # Edge regions not considered for max uncertainty evaluation
 DIST_EDGE = [6, 6]
 # Learning rate for each iteration (decrease if it becomes unstable)
