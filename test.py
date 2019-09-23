@@ -16,7 +16,8 @@ STEPS = 200
 # Type of kernel
 KERNEL = 'RationalQuadratic'
 # Bounds on priors
-LENGTH_CONSTR = [[1., 1., 2.5], [4., 4., 10.]]
+LENGTH_CONSTR1 = [[10., 10., 10.], [40., 40., 40.]]
+LENGTH_CONSTR2 = [[1., 1., 1.], [10., 10., 10.]]
 # Edge regions not considered for max uncertainty evaluation
 DIST_EDGE = [6, 6]
 # Learning rate for each iteration (decrease if it becomes unstable)
@@ -46,9 +47,9 @@ X, R = gprutils.corrupt_data_xy(X_true, R_true, prob=.95)
 uncert_idx_all, uncert_val_all, mean_all, sd_all, R_all = [], [], [], [], []
 if not os.path.exists(MDIR): os.makedirs(MDIR)
 for i in range(ESTEPS):
-    print('Exploration step {}/{}'.format(i, STEPS))
+    print('Exploration step {}/{}'.format(i, ESTEPS))
     # use different bounds on lengthscale at the very beginning
-    lscale = None if i < 10 else LENGTH_CONSTR
+    lscale = LENGTH_CONSTR1 if i < 10 else LENGTH_CONSTR2
     # Do exploration step
     bexplorer = gpr.explorer(X, R, X_true, KERNEL, lscale, use_gpu=USEGPU)
     uncert_idx, uncert_val, mean, sd = bexplorer.step(LR, STEPS, DIST_EDGE)

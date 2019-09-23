@@ -41,7 +41,7 @@ class explorer:
         step:
             Combines a single model training and prediction
     """
-    def __init__(self, X, y, Xtest, kernel, lengthscale, ldim=1,
+    def __init__(self, X, y, Xtest, kernel, lengthscale, ldim=3,
                  use_gpu=False, verbose=False):
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = True
@@ -58,7 +58,6 @@ class explorer:
         indpoints = 150 if indpoints > 150 else indpoints
         indpoints = 20 if indpoints == 0 else indpoints
         self.Xu = self.X[::len(self.X) // indpoints]
-        print("# of inducing points for GP regression: {}".format(len(self.Xu)))
         if self.use_gpu:
             self.X = self.X.cuda()
             self.y = self.y.cuda()
@@ -83,6 +82,7 @@ class explorer:
         pyro.set_rng_seed(0)
         pyro.clear_param_store()
         # initialize the model
+        print("# of inducing points for GP regression: {}".format(len(self.Xu)))
         sgpr = gp.models.SparseGPRegression(
             self.X, self.y, self.kernel, self.Xu, jitter=1.0e-5)
         # learn the model parameters
