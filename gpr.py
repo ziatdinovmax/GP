@@ -10,6 +10,184 @@ import pyro.distributions as dist
 import gprutils
 
 
+class explorer:
+    """
+    Class for uncertainty exploration in datacubes with GP regression
+
+    Args:
+        X:  c x  N x M x L ndarray
+            Grid indices.
+            c is equal to the number of coordinate dimensions.
+            For example, for xyz coordinates, c = 3.
+        y: N x M x L ndarray
+            Observations (data points)
+        kernel: str
+            kernel type
+        lengthscale: list of two lists
+            determines lower (1st list) and upper (2nd list) bounds
+            for kernel lengthscale(s) (default is from 0.1 to 20);
+        ldim: int
+            number of lengthscale dimensions (1 or 3)
+        use_gpu: bool
+            Uses GPU hardware accelerator when set to 'True'
+        verbose: bool
+            prints statistics after each 100th training iteration
+
+    Methods:
+        train_sgpr_model:
+            Training sparse GP regression model
+        sgpr_predict:
+            Using trained GP regression model to make predictions
+        step:
+            Combines a single model training and prediction
+    """
+    def __init__(self, X, y, Xtest, kernel, lengthscale, ldim=1,
+                 use_gpu=False, verbose=False):
+        if use_gpu and torch.cuda.is_available():
+            self.use_gpu = True
+            torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+        else:
+            self.use_gpu = False
+            torch.set_default_tensor_type(torch.DoubleTensor)
+        self.X, self.y = gprutils.prepare_training_data(X, y)
+        self.fulldims = Xtest.shape[1:]
+        self.Xtest = gprutils.prepare_test_data(Xtest)
+         # initialize the inducing inputs
+        indpoints = int(len(self.X)*1e-2)
+        # the next 2 lines are for numerical stability (needs more exploration)
+        indpoints = 150 if indpoints > 150 else indpoints
+        indpoints = 20 if indpoints == 0 else indpoints
+        self.Xu = self.X[::len(self.X) // indpoints]
+        print("# of inducing points for GP regression: {}".format(len(self.Xu)))
+        if self.use_gpu:
+            self.X = self.X.cuda()
+            self.y = self.y.cuda()
+            self.Xtest = self.Xtest.cuda()
+        self.kernel = get_kernel(
+            kernel, ldim, on_gpu=self.use_gpu, lengthscale=lengthscale)
+        self.verbose = verbose
+
+    def train_sgpr_model(self, learning_rate=5e-2, steps=1000):
+        """
+        Training sparse GP regression model
+
+        Args:
+            learning_rate: float
+                learning rate
+            steps: int
+                number of SVI training iteratons
+
+        Returns:
+            Trained model (GPregression object), list of training losses
+        """
+        pyro.set_rng_seed(0)
+        pyro.clear_param_store()
+        # initialize the model
+        sgpr = gp.models.SparseGPRegression(
+            self.X, self.y, self.kernel, self.Xu, jitter=1.0e-5)
+        # learn the model parameters
+        if self.use_gpu:
+            sgpr.cuda()
+        optimizer = torch.optim.Adam(sgpr.parameters(), lr=learning_rate)
+        loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
+        losses = []
+        num_steps = steps
+        start_time = time.time()
+        print('Model training...')
+        for i in range(num_steps):
+            optimizer.zero_grad()
+            loss = loss_fn(sgpr.model, sgpr.guide)
+            loss.backward()
+            optimizer.step()
+            losses.append(loss.item())
+            if self.verbose and (i % 100 == 0 or i == num_steps - 1):
+                print('iter: {} ...'.format(i),
+                    'loss: {} ...'.format(np.around(losses[-1], 4)),
+                    'amp: {} ...'.format(
+                        np.around(sgpr.kernel.variance.item(), 4)),
+                    'length: {} ...'.format(
+                        np.around(sgpr.kernel.lengthscale.tolist(), 4)),
+                    'noise: {} ...'.format(np.around(sgpr.noise.item(), 7)))
+            if i == 100:
+                print('average time per iteration: {} s'.format(
+                    np.round(time.time() - start_time, 2) / 100))
+        print('training completed in {} s'.format(
+            np.round(time.time() - start_time, 2)))
+        print('Final parameter values:\n',
+            'amp: {}, lengthscale: {}, noise: {}'.format(
+                np.around(sgpr.kernel.variance.item(), 4),
+                np.around(sgpr.kernel.lengthscale.tolist(), 4),
+                np.around(sgpr.noise.item(), 7)
+            ))
+        if self.use_gpu:
+            sgpr.cpu()
+
+        return sgpr, losses
+
+    def sgpr_predict(self, model, num_batches=10):
+        """
+        Use trained GPRegression model to make predictions
+
+        Args:
+            model: GPRegression object
+                Trained GP regression model
+            num_batches: int
+                number of batches for splitting the Xtest array
+                (for large datasets, you may not have enough GPU memory
+                to process the entire dataset at once)
+
+        Returns:
+            predictive mean and variance
+        """
+        print("Calculating predictive mean and variance...")
+        # Prepare for inference
+        batch_range = len(self.Xtest) // num_batches
+        mean = np.zeros((self.Xtest.shape[0]))
+        sd = np.zeros((self.Xtest.shape[0]))
+        if self.use_gpu:
+            model.cuda()
+        # Run inference batch-by-batch
+        for i in range(num_batches):
+            Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
+            with torch.no_grad():
+                mean_i, cov = model(Xtest_i, full_cov=True, noiseless=False)
+            sd_i = cov.diag().sqrt()
+            mean[i*batch_range:(i+1)*batch_range] = mean_i.cpu().numpy()
+            sd[i*batch_range:(i+1)*batch_range] = sd_i.cpu().numpy()
+        if self.use_gpu:
+            model.cpu()
+
+        return mean, sd
+
+    def step(self, learning_rate, steps, dist_edge, num_batches=100):
+        """
+        Finds new point with maximum uncertainty
+
+        Args:
+            learning_rate: float
+                learning rate for GPR model training
+            steps: int
+                number of SVI training iteratons
+            dist_edge: list with two integers
+                edge regions not considered for max uncertainty evaluation
+            num_batches: int
+                number of batches for splitting the Xtest array
+
+        Returns:
+            list indices of point with maximum uncertainty
+
+        """
+        # train a model
+        model, losses = self.train_sgpr_model(learning_rate, steps)
+        # make prediction
+        mean, sd = self.sgpr_predict(model, num_batches)
+        # find point with maximum uncertainty
+        sd_ = sd.reshape(self.fulldims[0], self.fulldims[1], self.fulldims[2])
+        amax, uncert_list = gprutils.max_uncertainty(sd_, dist_edge)
+
+        return amax, uncert_list, mean, sd
+
+
 def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
     """
     Initalizes one of the following kernels:
@@ -17,7 +195,7 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
 
     Args:
         kernel_type: str
-            kernel type ('RBF', 'Rational Quadratic', 'Periodic', Matern52')
+            kernel type ('RBF', 'Rational Quadratic', Matern52')
         input_dim: int
             number of input dimensions
             (equal to number of feature vector columns)
@@ -86,174 +264,3 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
     )
 
     return kernel
-
-
-def train_sgpr_model(X, y, kernel, learning_rate=5e-2, steps=1000,
-                    use_gpu=False, verbose=False):
-    """
-    Training sparse GP regression model
-
-    Args:
-        X: ndarray with N x c dimensions
-            c is equal to the number of coordinate dimensions.
-            For example, for xyz coordinates, c = 3.
-            N is equal to number of observations (data points)
-        y: ndarray with (N,) dimensions
-            Observations (data points)
-        kernel: Pyro kernel object
-            Initialized kernel
-        learning_rate: float
-            learning rate
-        steps: int
-            number of SVI training iteratons
-        use_gpu: bool
-            Uses GPU hardware accelerator when set to 'True'
-        verbose: bool
-            prints statistics after each 100th training iteration
-
-    Returns:
-        Trained model (GPregression object), list of training losses
-    """
-
-    pyro.set_rng_seed(0)
-    pyro.clear_param_store()
-    # initialize the inducing inputs
-    indpoints = int(len(X)*1e-2)
-    indpoints = 150 if indpoints > 150 else indpoints
-    indpoints = 20 if indpoints == 0 else indpoints
-    Xu = X[::len(X) // indpoints]
-    print("Number of inducing points for GP regression: {}".format(len(Xu)))
-    if use_gpu:
-        X = X.cuda()
-        y = y.cuda()
-    # initialize the model
-    sgpr = gp.models.SparseGPRegression(X, y, kernel, Xu=Xu, jitter=1.0e-5)
-    # learn the model parameters
-    if use_gpu:
-        sgpr.cuda()
-    optimizer = torch.optim.Adam(sgpr.parameters(), lr=learning_rate)
-    loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
-    losses = []
-    num_steps = steps
-    start_time = time.time()
-    print('Model training...')
-    for i in range(num_steps):
-        optimizer.zero_grad()
-        loss = loss_fn(sgpr.model, sgpr.guide)
-        loss.backward()
-        optimizer.step()
-        losses.append(loss.item())
-        if verbose and (i % 100 == 0 or i == num_steps - 1):
-            print('iter: {} ...'.format(i),
-                  'loss: {} ...'.format(np.around(losses[-1], 4)),
-                  'amp: {} ...'.format(
-                    np.around(sgpr.kernel.variance.item(), 4)),
-                  'length: {} ...'.format(
-                    np.around(sgpr.kernel.lengthscale.tolist(), 4)),
-                  'noise: {} ...'.format(np.around(sgpr.noise.item(), 7)))
-        if i == 100:
-            print('average time per iteration: {} s'.format(
-                np.round(time.time() - start_time, 2) / 100))
-    print('training completed in {} s'.format(
-        np.round(time.time() - start_time, 2)))
-    print('Final parameter values:\n',
-          'amp: {}, lengthscale: {}, noise: {}'.format(
-              np.around(sgpr.kernel.variance.item(), 4),
-              np.around(sgpr.kernel.lengthscale.tolist(), 4),
-              np.around(sgpr.noise.item(), 7)
-          ))
-    if use_gpu:
-        X = X.cpu()
-        y = y.cpu()
-        sgpr.cpu()  # this actually doesn't seem to work in Pyro as intented
-
-    return sgpr, losses
-
-def sgpr_predict(model, Xtest, use_gpu=False, num_batches=10):
-    """
-    Use trained GPRegression model to make predictions
-
-    Args:
-        model: GPRegression object
-            Trained GP regression model
-        Xtest: N x c ndarray
-            "Test" coordinate indices
-        use_gpu: bool
-            Uses GPU hardware accelerator when set to 'True'
-        num_batches: int
-            number of batches for splitting the Xtest array
-            (for large datasets, you may not have enough GPU memory
-            to process the entire dataset at once)
-
-    Returns:
-        predictive mean and variance
-    """
-    print("Making prediction with the trained model...")
-    # Prepare for inference
-    batch_range = len(Xtest) // num_batches
-    mean = np.zeros((Xtest.shape[0]))
-    sd = np.zeros((Xtest.shape[0]))
-    # Run inference batch-by-batch
-    for i in range(num_batches):
-        Xtest_i = torch.from_numpy(Xtest[i*batch_range:(i+1)*batch_range])
-        if use_gpu:
-            Xtest_i = Xtest_i.cuda()
-            model = model.cuda()
-        with torch.no_grad():
-            mean_i, cov = model(Xtest_i, full_cov=True, noiseless=False)
-        sd_i = cov.diag().sqrt()
-        mean[i*batch_range:(i+1)*batch_range] = mean_i.cpu().numpy()
-        sd[i*batch_range:(i+1)*batch_range] = sd_i.cpu().numpy()
-    if use_gpu:
-        model.cpu()
-
-    return mean, sd
-
-
-def exploration_step(X, R, X_true, dist_edge, lscale,
-                     learning_rate=.1, steps=200,
-                     use_gpu=0, verbose=1):
-    """
-    Finds new point with maximum uncertainty
-
-    Args:
-        X:  c x  N x M x L ndarray
-            Grid indices for initial partial observations
-            c is equal to the number of coordinate dimensions.
-            For example, for xyz coordinates, c = 3.
-            Missing points are NaNs.
-        R: N x M x L ndarray
-            Observations (data points).
-            Missing data points are NaNs.
-        X_true:  c x  N x M x L ndarray
-            Grid indices for full observations (i.e. without NaNs)
-            The dimensions are equal to those of X
-        dist_edge: list with two integers
-            edge regions not considered for max uncertainty evaluation
-        learning_rate: float
-            learning rate for GPR model training
-
-    Returns:
-        list indices of point with maximum uncertainty
-
-    """
-    e1, e2, e3 = R.shape
-    # pre-process data
-    X_tor, R_tor = gprutils.prepare_training_data(X, R)
-    # train a model
-    model, losses = train_sgpr_model(
-        X_tor, R_tor, get_kernel(
-            'RationalQuadratic', len_dim=1, lengthscale=lscale),
-        learning_rate=learning_rate, steps=steps,
-        use_gpu=use_gpu, verbose=verbose
-        )
-    # make prediction
-    mean, sd = sgpr_predict(
-        model, gprutils.prepare_test_data(X_true),
-        use_gpu=use_gpu, num_batches=100
-        )
-    # find point with maximum uncertainty
-    sd = sd.reshape(e1, e2, e3)
-    amax, uncert_list = gprutils.max_uncertainty(sd, dist_edge)
-
-    return amax, uncert_list

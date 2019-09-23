@@ -146,6 +146,7 @@ def prepare_test_data(X):
     """
 
     X = X.reshape(X.shape[0], X.shape[1]*X.shape[2]*X.shape[3]).T
+    X = torch.from_numpy(X)
 
     return X
 

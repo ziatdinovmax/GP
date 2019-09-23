@@ -2,20 +2,31 @@
 # Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 # imports
+import os
 import numpy as np
 import gpr
 import gprutils
 import torch
 torch.set_default_tensor_type(torch.DoubleTensor)
 
-# number of total steps
-STEPS = 45
-# edge regions not considered for max uncertainty evaluation
+# Number of exploratory steps
+ESTEPS = 45
+# Number of steps for a single model training
+STEPS = 200
+# Type of kernel
+KERNEL = 'RationalQuadratic'
+# Bounds on priors
+LENGTH_CONSTR = [[1., 1., 2.5], [4., 4., 10.]]
+# Edge regions not considered for max uncertainty evaluation
 DIST_EDGE = [6, 6]
-# learning rate for each iteration (decrease if it becomes unstable)
+# Learning rate for each iteration (decrease if it becomes unstable)
 LR = .1
-# size of measurements
+# Size of measurements
 MSIZE = 2
+# Run on CPU or GPU
+USEGPU = False
+# Directory to save data
+MDIR = 'Output'
 
 # Load "ground truth" data (N x M x L spectroscopic grid)
 # (in real experiment we will just get an empty array)
@@ -32,19 +43,29 @@ X_true = np.array([c1, c2, c3])
 X, R = gprutils.corrupt_data_xy(X_true, R_true, prob=.95)
 
 # Run exploratory analysis
-uncert_idx_all, uncert_val_all = [], []
-for i in range(STEPS):
+uncert_idx_all, uncert_val_all, mean_all, sd_all, R_all = [], [], [], [], []
+if not os.path.exists(MDIR): os.makedirs(MDIR)
+for i in range(ESTEPS):
     print('Exploration step {}/{}'.format(i, STEPS))
     # use different bounds on lengthscale at the very beginning
-    lscale = None if i < 10 else [[1., 1., 2.5], [4., 4., 10.]]
+    lscale = None if i < 10 else LENGTH_CONSTR
     # Do exploration step
-    uncert_idx, uncert_val = gpr.exploration_step(
-        X, R, X_true, DIST_EDGE, lscale, LR)
+    bexplorer = gpr.explorer(X, R, X_true, KERNEL, lscale, use_gpu=USEGPU)
+    uncert_idx, uncert_val, mean, sd = bexplorer.step(LR, STEPS, DIST_EDGE)
+    # some safeguards (to not stuck at one point)
     uncert_idx, uncert_val = gprutils.checkvalues(
         uncert_idx, uncert_idx_all, uncert_val)
     # store intermediate results
     uncert_idx_all.append(uncert_idx)
     uncert_val_all.append(uncert_val)
+    R_all.append(R)
+    mean_all.append(mean)
+    sd_all.append(sd)
     # make a "measurement" in the point with maximum uncertainty
     print('Doing "measurement"...\n')
     R, X = gprutils.do_measurement(R_true, X_true, R, X, uncert_idx, MSIZE)
+    # (over)write results on disk
+    np.save(os.path.join(MDIR, 'sgpr_cits_R_5.npy'), R_all)
+    np.save(os.path.join(MDIR, 'sgpr_cits_means_5.npy'), mean_all)
+    np.save(os.path.join(MDIR, 'sgpr_cits_sd_5.npy'), sd_all)
+    np.save(os.path.join(MDIR, 'sgpr_cits_amax_5.npy'), uncert_idx_all)
