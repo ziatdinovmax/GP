@@ -3,6 +3,7 @@
 
 # imports
 import os
+import copy
 import numpy as np
 import gpr
 import gprutils
@@ -10,22 +11,21 @@ import torch
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 # Number of exploratory steps
-ESTEPS = 45
+ESTEPS = 40
 # Number of steps for a single model training
-STEPS = 200
+STEPS = 1000
 # Type of kernel
 KERNEL = 'RationalQuadratic'
 # Bounds on priors
-LENGTH_CONSTR1 = [[10., 10., 10.], [40., 40., 40.]]
-LENGTH_CONSTR2 = [[1., 1., 1.], [10., 10., 10.]]
+LENGTH_CONSTR = [[1., 1., 1.], [40., 40., 40.]]
 # Edge regions not considered for max uncertainty evaluation
 DIST_EDGE = [6, 6]
 # Learning rate for each iteration (decrease if it becomes unstable)
-LR = .1
+LR = .05
 # Size of measurements
 MSIZE = 2
 # Run on CPU or GPU
-USEGPU = False
+USEGPU = True
 # Directory to save data
 MDIR = 'Output'
 
@@ -48,24 +48,24 @@ uncert_idx_all, uncert_val_all, mean_all, sd_all, R_all = [], [], [], [], []
 if not os.path.exists(MDIR): os.makedirs(MDIR)
 for i in range(ESTEPS):
     print('Exploration step {}/{}'.format(i, ESTEPS))
-    # use different bounds on lengthscale at the very beginning
-    lscale = LENGTH_CONSTR1 if i < 10 else LENGTH_CONSTR2
-    # Do exploration step
-    bexplorer = gpr.explorer(X, R, X_true, KERNEL, lscale, use_gpu=USEGPU)
+    # Do exploration step. 'uncert_idx' are the indices of a region with maximum uncertainty
+    bexplorer = gpr.explorer(X, R, X_true, KERNEL, LENGTH_CONSTR, use_gpu=USEGPU)
     uncert_idx, uncert_val, mean, sd = bexplorer.step(LR, STEPS, DIST_EDGE)
     # some safeguards (to not stuck at one point)
     uncert_idx, uncert_val = gprutils.checkvalues(
         uncert_idx, uncert_idx_all, uncert_val)
-    # store intermediate results
+    # store intermediate results 
     uncert_idx_all.append(uncert_idx)
     uncert_val_all.append(uncert_val)
-    R_all.append(R)
-    mean_all.append(mean)
-    sd_all.append(sd)
+    # (optional)
+    R_all.append(copy.deepcopy(R.flatten()))
+    mean_all.append(copy.deepcopy(mean))
+    sd_all.append(copy.deepcopy(sd))
     # make a "measurement" in the point with maximum uncertainty
     print('Doing "measurement"...\n')
     R, X = gprutils.do_measurement(R_true, X_true, R, X, uncert_idx, MSIZE)
     # (over)write results on disk
+    # (optional)
     np.save(os.path.join(MDIR, 'sgpr_cits_R_5.npy'), R_all)
     np.save(os.path.join(MDIR, 'sgpr_cits_means_5.npy'), mean_all)
     np.save(os.path.join(MDIR, 'sgpr_cits_sd_5.npy'), sd_all)

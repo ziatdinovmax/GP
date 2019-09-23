@@ -96,7 +96,6 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
         measure: int
             half of measurement square
     """
-    print(uncertmax)
     a0, a1 = uncertmax
     # make "observation"
     R_obs = R_true[a0-measure:a0+measure, a1-measure:a1+measure, :]
