@@ -1,6 +1,5 @@
 setuptools==41.0.1
 matplotlib==3.1.1
-h5py==2.9.0
 jupyterlab==1.0.1
 pyro-ppl==0.4.1
 nanonispy==1.0.6
