@@ -53,7 +53,7 @@ class explorer:
         self.fulldims = Xtest.shape[1:]
         self.Xtest = gprutils.prepare_test_data(Xtest)
          # initialize the inducing inputs
-        indpoints = int(len(self.X)*1e-2)
+        indpoints = int(len(self.X)*5e-3)
         # the next 2 lines are for numerical stability (needs more exploration)
         indpoints = 150 if indpoints > 150 else indpoints
         indpoints = 20 if indpoints == 0 else indpoints
@@ -260,7 +260,7 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
         dist.Uniform(
             torch.tensor(lscale[0]),
             torch.tensor(lscale[1])
-        ).to_event()
+        ).independent()
     )
 
     return kernel
