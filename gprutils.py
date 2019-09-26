@@ -98,11 +98,11 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     """
     a0, a1 = uncertmax
     # make "observation"
-    R_obs = R_true[a0-measure:a0+measure, a1-measure:a1+measure, :]
-    X_obs = X_true[:, a0-measure:a0+measure, a1-measure:a1+measure, :]
+    R_obs = R_true[a0-measure:a0+measure+1, a1-measure:a1+measure+1, :]
+    X_obs = X_true[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1, :]
     # update the input
-    R[a0-measure:a0+measure, a1-measure:a1+measure, :] = R_obs
-    X[:, a0-measure:a0+measure, a1-measure:a1+measure, :] = X_obs
+    R[a0-measure:a0+measure+1, a1-measure:a1+measure+1, :] = R_obs
+    X[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1, :] = X_obs
     return R, X
 
 
@@ -186,4 +186,3 @@ def corrupt_data_xy(X_true, R_true, prob=0.5):
     X[:, indices, :] = np.nan
     X = X.reshape(3, e1, e2, e3)
     return X, R
-
