@@ -11,7 +11,7 @@ import torch
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 # Number of exploratory steps
-ESTEPS = 40
+ESTEPS = 60
 # Number of steps for a single model training
 STEPS = 1500
 # Type of kernel
@@ -21,9 +21,9 @@ LENGTH_CONSTR = [[1., 1., 1.], [10., 10., 10.]]
 # Edge regions not considered for max uncertainty evaluation
 DIST_EDGE = [6, 6]
 # Learning rate for each iteration (decrease if it becomes unstable)
-LR = .05
-# Size of measurements
-MSIZE = 2
+LR = .1
+# Size of measurements (2*MSIZE+1)
+MSIZE = 1
 # Run on CPU or GPU
 USEGPU = True
 # Directory to save data
@@ -48,7 +48,8 @@ uncert_idx_all, uncert_val_all, mean_all, sd_all, R_all = [], [], [], [], []
 if not os.path.exists(MDIR): os.makedirs(MDIR)
 for i in range(ESTEPS):
     print('Exploration step {}/{}'.format(i, ESTEPS))
-    # Do exploration step. 'uncert_idx' are the indices of a region with maximum uncertainty
+    # Do exploration step.
+    # 'uncert_idx' are the indices of a region with maximum uncertainty
     bexplorer = gpr.explorer(X, R, X_true, KERNEL, LENGTH_CONSTR, use_gpu=USEGPU)
     uncert_idx, uncert_val, mean, sd = bexplorer.step(LR, STEPS, DIST_EDGE)
     # some safeguards (to not stuck at one point)
