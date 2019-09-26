@@ -2,6 +2,7 @@
 # Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 import os
+import copy
 import numpy as np
 import torch
 import pyro
@@ -186,3 +187,100 @@ def corrupt_data_xy(X_true, R_true, prob=0.5):
     X[:, indices, :] = np.nan
     X = X.reshape(3, e1, e2, e3)
     return X, R
+
+
+def plot_exploration_results(R_all, mean_all, sd_all, R_true,
+                             episodes, slice_number, pos,
+                             dist_edge, mask_predictions=False):
+    """
+    Plots predictions at different stages ("episodes")
+    of max uncertainty-based sample exploration
+
+    Args:
+        R_all: list with ndarrays
+            Observed data points at each exploration step
+        mean_all: list of ndarrays
+            Predictive mean at each exploration step
+        sd_all:
+            Integrated (along energy dimension) SD at each exploration step
+        R_true:
+            Ground truth data (full observations) for synthetic data
+            OR array of zeros/NaNs with N x M x L dims for real experiment
+        episodes: list of integers
+            list with # of iteration steps to be visualized
+        slice_number: int
+            slice from datacube to visualize
+        pos: list of lists
+            list with [x, y] coordinates of points where
+            single spectroscopic curves will be extracted and visualized
+        dist_edge: list with two integers
+            this should be the same as in exploration analysis
+        mask_predictions: bool
+            mask edge regions not used in max uncertainty evaluation
+            in predictive mean plots
+
+        Returns:
+            Plot the results of exploration analysis for the selected steps
+    """
+
+    s = slice_number
+    _colors = ['black', 'red', 'green', 'blue', 'orange']
+    e1, e2, e3 = R_true.shape
+
+    # plot ground truth data if available
+    if not np.isnan(R_true).any() or np.unique(R_true).any():
+        _, ax = plt.subplots(1, 2, figsize=(7, 3))
+        ax[0].imshow(R_true[:, :, s], cmap='jet')
+        for p, col in zip(pos, _colors):
+            ax[0].scatter(p[1], p[0], c=col)
+            ax[1].plot(R_true[p[0], p[1], :], c=col)
+        ax[1].axvline(x=s, linestyle='--')
+        ax[0].set_title('Grid spectroscopy\n(ground truth)')
+        ax[1].set_title('Individual spectroscopic curves\n(ground truth)')
+
+    # Plot predictions
+    n = len(episodes) + 1
+    fig = plt.figure(figsize=(20, 16))
+
+    for i in range(1, n):
+        Rcurr = R_all[episodes[i-1]].reshape(e1, e2, e3)
+        Rtest = mean_all[episodes[i-1]].reshape(e1, e2, e3)
+        R_sd = sd_all[episodes[i-1]].reshape(e1, e2, e3)
+
+        ax = fig.add_subplot(4, n, i)
+        ax.imshow(Rcurr[:, :, s], cmap='jet')
+        ax.set_title('Observations episode {}'.format(episodes[i-1]))
+
+        ax = fig.add_subplot(4, n, i + n)
+        Rtest_to_plot = copy.deepcopy((Rtest[:, :, s]))
+        mask = np.zeros(Rtest_to_plot.shape, bool)
+        mask[dist_edge[0]:e1-dist_edge[0],
+             dist_edge[1]:e2-dist_edge[1]] = True
+        if mask_predictions:
+            Rtest_to_plot[~mask] = np.nan
+        ax.imshow(Rtest_to_plot, cmap='jet')
+        for p, col in zip(pos, _colors):
+            ax.scatter(p[1], p[0], c=col)
+        ax.set_title('GPR reconstruction episode {}'.format(episodes[i-1]))
+        ax = fig.add_subplot(4, n, i + 2*n)
+        for p, col in zip(pos, _colors):
+            ax.plot(Rtest[p[0], p[1], :], c=col)
+            ax.fill_between(np.arange(e3),
+                            (Rtest[p[0], p[1], :] - 2.0 *
+                            R_sd[p[0], p[1], :]),
+                            (Rtest[p[0], p[1], :] + 2.0 *
+                            R_sd[p[0], p[1], :]),
+                            color=col, alpha=0.15)
+            ax.axvline(x=s+1, linestyle='--')
+        ax.set_title('Uncertainty episode {}'.format(episodes[i-1]))
+
+        ax = fig.add_subplot(4, n, i + 3*n)
+        R_sd_to_plot = copy.deepcopy(R_sd)
+        R_sd_to_plot = np.sum(R_sd_to_plot, axis=-1)
+        R_sd_to_plot[~mask] = np.nan
+        ax.imshow(R_sd_to_plot, cmap='jet')
+        ax.set_title('Integrated uncertainty\nepisode {}'.format(episodes[i-1]))
+
+    plt.subplots_adjust(hspace=.3)
+    plt.subplots_adjust(wspace=.3)
+    plt.show()
