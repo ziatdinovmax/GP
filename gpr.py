@@ -26,16 +26,14 @@ class explorer:
         lengthscale: list of two lists
             determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscale(s) (default is from 0.1 to 20);
+        indpoints: int
+            number of inducing points for SparseGPRegression
         ldim: int
             number of lengthscale dimensions (1 or 3)
         use_gpu: bool
             Uses GPU hardware accelerator when set to 'True'
         verbose: bool
             prints statistics after each 100th training iteration
-
-    **Kwargs:
-        inducing_points: int
-            number of inducing points for SparseGPRegression
 
     Methods:
         train_sgpr_model:
@@ -45,8 +43,8 @@ class explorer:
         step:
             Combines a single model training and prediction
     """
-    def __init__(self, X, y, Xtest, kernel, lengthscale, ldim=3,
-                 use_gpu=False, verbose=False, **kwargs):
+    def __init__(self, X, y, Xtest, kernel, lengthscale,
+                 indpoints=150, ldim=3, use_gpu=False, verbose=False):
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = True
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
@@ -57,11 +55,10 @@ class explorer:
         self.fulldims = Xtest.shape[1:]
         self.Xtest = gprutils.prepare_test_data(Xtest)
         # initialize the inducing inputs
-        indpoints = kwargs.get('inducing_points')
-        if not indpoints:
-            indpoints = int(len(self.X)*5e-2)
+        #if not indpoints:
+            #indpoints = int(len(self.X)*5e-2)
             #indpoints = 1500 if indpoints > 1500 else indpoints
-            indpoints = 20 if indpoints == 0 else indpoints
+            #indpoints = 20 if indpoints == 0 else indpoints
         self.Xu = self.X[::len(self.X) // indpoints]
         if self.use_gpu:
             self.X = self.X.cuda()
