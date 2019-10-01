@@ -33,6 +33,10 @@ class explorer:
         verbose: bool
             prints statistics after each 100th training iteration
 
+    **Kwargs:
+        inducing_points: int
+            number of inducing points for SparseGPRegression
+
     Methods:
         train_sgpr_model:
             Training sparse GP regression model
@@ -42,7 +46,7 @@ class explorer:
             Combines a single model training and prediction
     """
     def __init__(self, X, y, Xtest, kernel, lengthscale, ldim=3,
-                 use_gpu=False, verbose=False):
+                 use_gpu=False, verbose=False, **kwargs):
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = True
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
@@ -52,11 +56,12 @@ class explorer:
         self.X, self.y = gprutils.prepare_training_data(X, y)
         self.fulldims = Xtest.shape[1:]
         self.Xtest = gprutils.prepare_test_data(Xtest)
-         # initialize the inducing inputs
-        indpoints = int(len(self.X)*5e-3)
-        # the next 2 lines are for numerical stability (needs more exploration)
-        indpoints = 150 if indpoints > 150 else indpoints
-        indpoints = 20 if indpoints == 0 else indpoints
+        # initialize the inducing inputs
+        indpoints = kwargs.get('inducing_points')
+        if not indpoints:
+            indpoints = int(len(self.X)*5e-2)
+            #indpoints = 1500 if indpoints > 1500 else indpoints
+            indpoints = 20 if indpoints == 0 else indpoints
         self.Xu = self.X[::len(self.X) // indpoints]
         if self.use_gpu:
             self.X = self.X.cuda()
@@ -90,7 +95,7 @@ class explorer:
             sgpr.cuda()
         optimizer = torch.optim.Adam(sgpr.parameters(), lr=learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
-        losses = []
+        losses, lscales, noise_all = [], [], []
         num_steps = steps
         start_time = time.time()
         print('Model training...')
@@ -100,6 +105,8 @@ class explorer:
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
+            lscales.append(sgpr.kernel.lengthscale.tolist())
+            noise_all.append(sgpr.noise.item())
             if self.verbose and (i % 100 == 0 or i == num_steps - 1):
                 print('iter: {} ...'.format(i),
                     'loss: {} ...'.format(np.around(losses[-1], 4)),
@@ -122,7 +129,7 @@ class explorer:
         if self.use_gpu:
             sgpr.cpu()
 
-        return sgpr, losses
+        return sgpr, lscales, noise_all, losses
 
     def sgpr_predict(self, model, num_batches=10):
         """
@@ -178,7 +185,7 @@ class explorer:
 
         """
         # train a model
-        model, losses = self.train_sgpr_model(learning_rate, steps)
+        model = self.train_sgpr_model(learning_rate, steps)[0]
         # make prediction
         mean, sd = self.sgpr_predict(model, num_batches)
         # find point with maximum uncertainty
