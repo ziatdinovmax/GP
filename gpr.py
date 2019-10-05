@@ -44,7 +44,7 @@ class explorer:
             Combines a single model training and prediction
     """
     def __init__(self, X, y, Xtest, kernel, lengthscale,
-                 indpoints=150, ldim=3, use_gpu=False, verbose=False):
+                 indpoints=1000, ldim=3, use_gpu=False, verbose=False):
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = True
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
@@ -59,6 +59,8 @@ class explorer:
             #indpoints = int(len(self.X)*5e-2)
             #indpoints = 1500 if indpoints > 1500 else indpoints
             #indpoints = 20 if indpoints == 0 else indpoints
+        if indpoints > len(self.X):
+            indpoints = len(self.X)
         self.Xu = self.X[::len(self.X) // indpoints]
         if self.use_gpu:
             self.X = self.X.cuda()
