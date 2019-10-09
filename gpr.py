@@ -76,7 +76,8 @@ class explorer:
                 number of SVI training iteratons
 
         Returns:
-            Trained model (GPregression object), list of training losses
+            Trained model (GPregression object), list of training losses,
+            dictionary with hyperparameter values for each step.
         """
         pyro.set_rng_seed(0)
         pyro.clear_param_store()
