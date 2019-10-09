@@ -207,7 +207,7 @@ def plot_raw_data(raw_data, slice_number, pos, spec_window=2):
 
     """
     # colors sequence
-    my_colors = ['gray', 'red', 'green', 'black', 'orange', 'blue']
+    my_colors = ['black', 'red', 'green', 'gray', 'orange', 'blue']
     # Plotting
     s = slice_number
     spw = spec_window
