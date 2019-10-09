@@ -190,8 +190,8 @@ def corrupt_data_xy(X_true, R_true, prob=0.5):
 
 
 def plot_exploration_results(R_all, mean_all, sd_all, R_true,
-                             episodes, slice_number, pos,
-                             dist_edge, mask_predictions=False):
+                             episodes, slice_number, pos, dist_edge,
+                             spec_win=0, mask_predictions=False):
     """
     Plots predictions at different stages ("episodes")
     of max uncertainty-based sample exploration
@@ -215,6 +215,8 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
             single spectroscopic curves will be extracted and visualized
         dist_edge: list with two integers
             this should be the same as in exploration analysis
+        spec_win: int
+            window to integrate over in frequency dimension (for 2D "slices")
         mask_predictions: bool
             mask edge regions not used in max uncertainty evaluation
             in predictive mean plots
@@ -224,17 +226,18 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
     """
 
     s = slice_number
+    spw = spec_win
     _colors = ['black', 'red', 'green', 'blue', 'orange']
     e1, e2, e3 = R_true.shape
 
     # plot ground truth data if available
     if not np.isnan(R_true).any() or np.unique(R_true).any():
         _, ax = plt.subplots(1, 2, figsize=(7, 3))
-        ax[0].imshow(R_true[:, :, s], cmap='jet')
+        ax[0].imshow(np.sum(R_true[:, :, s-spw:s+spw], axis=-1), cmap='jet')
         for p, col in zip(pos, _colors):
             ax[0].scatter(p[1], p[0], c=col)
             ax[1].plot(R_true[p[0], p[1], :], c=col)
-        ax[1].axvline(x=s, linestyle='--')
+        ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.25)
         ax[0].set_title('Grid spectroscopy\n(ground truth)')
         ax[1].set_title('Individual spectroscopic curves\n(ground truth)')
 
@@ -248,11 +251,11 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
         R_sd = sd_all[episodes[i-1]].reshape(e1, e2, e3)
 
         ax = fig.add_subplot(4, n, i)
-        ax.imshow(Rcurr[:, :, s], cmap='jet')
+        ax.imshow(np.sum(Rcurr[:, :, s-spw:s+spw], axis=1), cmap='jet')
         ax.set_title('Observations episode {}'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + n)
-        Rtest_to_plot = copy.deepcopy((Rtest[:, :, s]))
+        Rtest_to_plot = copy.deepcopy((np.sum(Rtest[:, :, s-spw:s+spw])))
         mask = np.zeros(Rtest_to_plot.shape, bool)
         mask[dist_edge[0]:e1-dist_edge[0],
              dist_edge[1]:e2-dist_edge[1]] = True
@@ -271,7 +274,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
                             (Rtest[p[0], p[1], :] + 2.0 *
                             R_sd[p[0], p[1], :]),
                             color=col, alpha=0.15)
-            ax.axvline(x=s+1, linestyle='--')
+            ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.25)
         ax.set_title('Uncertainty episode {}'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + 3*n)
