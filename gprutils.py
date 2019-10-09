@@ -295,7 +295,7 @@ def plot_reconstructed_data(R, mean, sd, R_true,
                         (Rtest[p[0], p[1], :]
                          + 2.0 * R_sd[p[0], p[1], :]),
                         color=col, alpha=0.15)
-    ax[2, 1].axvdpsn(s-spw, s+spw, linestyle='--', alpha=.1)
+    ax[2, 1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
     ax[2, 1].set_ylim(-0.1, 1.1)
     ax[2, 1].set_xlim(-3, e3+3)
     for _ax in [ax[2, 0], ax[2, 1]]:
