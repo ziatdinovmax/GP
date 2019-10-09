@@ -1,7 +1,6 @@
 # Utility functions
 # Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
-import os
 import copy
 import numpy as np
 import torch
@@ -213,11 +212,11 @@ def plot_raw_data(raw_data, slice_number, pos, spec_window=2):
     s = slice_number
     spw = spec_window
     _, ax = plt.subplots(1, 2, figsize=(10, 4.5))
-    ax[0].imshow(np.sum(raw_data[:, : , s-spw:s+spw], axis=-1), cmap='magma')
+    ax[0].imshow(np.sum(raw_data[:, :, s-spw:s+spw], axis=-1), cmap='magma')
     for p, col in zip(pos, my_colors):
         ax[0].scatter(p[1], p[0], c=col)
         ax[1].plot(raw_data[p[0], p[1], :], c=col)
-    ax[1].axvspan(s-spw, s+spw linestyle = '--')
+    ax[1].axvspan(s-spw, s+spw, linestyle='--')
     ax[0].set_title('Grid spectroscopy')
     ax[1].set_title('Individual spectroscopic curve')
     plt.subplots_adjust(wspace=.3)
