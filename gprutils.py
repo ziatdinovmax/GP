@@ -191,7 +191,7 @@ def corrupt_data_xy(X_true, R_true, prob=0.5):
 
 def plot_exploration_results(R_all, mean_all, sd_all, R_true,
                              episodes, slice_number, pos, dist_edge,
-                             spec_win=0, mask_predictions=False):
+                             spec_win=2, mask_predictions=False):
     """
     Plots predictions at different stages ("episodes")
     of max uncertainty-based sample exploration
