@@ -189,9 +189,120 @@ def corrupt_data_xy(X_true, R_true, prob=0.5):
     return X, R
 
 
+def plot_raw_data(raw_data, slice_number, pos, spec_window=2):
+    """
+    Plots hyperspectral data as 2D image
+    integrated over a certain range of energy/frequency
+    and selected individual spectroscopic curves
+
+    Args:
+        raw_data: 3D numpy array
+            hyperspectral cube
+        slice_number: int
+            slice from datacube to visualize
+        pos: list of lists
+            list with [x, y] coordinates of points where
+            single spectroscopic curves will be extracted and visualized
+        spec_window: int
+            window to integrate over in frequency dimension (for 2D "slices")
+
+    """
+    # colors sequence
+    my_colors = ['gray', 'red', 'green', 'black', 'orange', 'blue']
+    # Plotting
+    s = slice_number
+    spw = spec_window
+    _, ax = plt.subplots(1, 2, figsize=(10, 4.5))
+    ax[0].imshow(np.sum(raw_data[:, : , s-spw:s+spw], axis=-1), cmap='magma')
+    for p, col in zip(pos, my_colors):
+        ax[0].scatter(p[1], p[0], c=col)
+        ax[1].plot(raw_data[p[0], p[1], :], c=col)
+    ax[1].axvspan(s-spw, s+spw linestyle = '--')
+    ax[0].set_title('Grid spectroscopy')
+    ax[1].set_title('Individual spectroscopic curve')
+    plt.subplots_adjust(wspace=.3)
+    plt.show()
+
+
+def plot_reconstructed_data(R, mean, sd, R_true,
+                            slice_number, pos,
+                            spec_window=2, **kwargs):
+    """
+    R: 3D numpy array
+        hyperspectral cube (input data for GP regression)
+    mean: 1D numpy array
+        predictive mean
+        (flattened; actual dimensions are the same as for R and R_true)
+    sd: 1D numpy array
+        standard deviation
+        (flattened; actual dimensions are the same as for R and R_true)
+    R_true: 3D numpy array
+        hyperspectral cube
+        (original data; if no observations weere removed, R_true == R)
+    slice_number: int
+        slice from datacube to visualize
+    pos: list of lists
+        list with [x, y] coordinates of points where
+        single spectroscopic curves will be extracted and visualized
+    spec_window: int
+        window to integrate over in frequency dimension (for 2D "slices")
+
+    **Kwargs:
+        sparsity: float (between 0 and 1)
+            indicates % of data points removed (used only for figure title)
+    """
+    sparsity = kwargs.get('sparsity')
+    s = slice_number
+    e1, e2, e3 = R_true.shape
+    spw = spec_window
+    Rtest = mean.reshape(e1, e2, e3)
+    R_sd = sd.reshape(e1, e2, e3)
+    my_colors = ['black', 'red', 'green', 'gray', 'orange', 'blue']
+    fig, ax = plt.subplots(3, 2, figsize=(10, 16))
+    ax[0, 0].imshow(
+        np.sum(R_true[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
+    for p, col in zip(pos, my_colors):
+        ax[0, 0].scatter(p[1], p[0], c=col)
+        ax[0, 1].plot(R_true[p[0], p[1], :], c=col)
+    ax[0, 1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
+    ax[0, 1].set_ylim(-0.1, 0.9)
+    for _ax in [ax[0, 0], ax[0, 1]]:
+        _ax.set_title('Ground truth')
+    ax[1, 0].imshow(
+        np.sum(R[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
+    for p, col in zip(pos, my_colors):
+        ax[1, 0].scatter(p[1], p[0], c=col)
+        ax[1, 1].plot(R[p[0], p[1], :], c=col)
+    ax[1, 1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
+    ax[1, 1].set_ylim(-0.1, 0.9)
+    for _ax in [ax[1, 0], ax[1, 1]]:
+        if sparsity:
+            _ax.set_title(
+                'Corrupted data\n{}% of observations removed'.format(sparsity*100))
+        else:
+            _ax.set_title('Corrupted data')
+    ax[2, 0].imshow(
+        np.sum(Rtest[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
+    for p, col in zip(pos, my_colors):
+        ax[2, 0].scatter(p[1], p[0], c=col)
+        ax[2, 1].plot(Rtest[p[0], p[1], :], c=col)
+        ax[2, 1].fill_between(np.arange(e3),
+                        (Rtest[p[0], p[1], :] -
+                         2.0 * R_sd[p[0], p[1], :]),
+                        (Rtest[p[0], p[1], :]
+                         + 2.0 * R_sd[p[0], p[1], :]),
+                        color=col, alpha=0.15)
+    ax[2, 1].axvdpsn(s-spw, s+spw, linestyle='--', alpha=.1)
+    ax[2, 1].set_ylim(-0.1, 0.9)
+    for _ax in [ax[2, 0], ax[2, 1]]:
+        _ax.set_title('GPR reconstruction')
+    plt.subplots_adjust(hspace=.3)
+    plt.show()
+
+
 def plot_exploration_results(R_all, mean_all, sd_all, R_true,
                              episodes, slice_number, pos, dist_edge,
-                             spec_win=2, mask_predictions=False):
+                             spec_window=2, mask_predictions=False):
     """
     Plots predictions at different stages ("episodes")
     of max uncertainty-based sample exploration
@@ -226,7 +337,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
     """
 
     s = slice_number
-    spw = spec_win
+    spw = spec_window
     _colors = ['black', 'red', 'green', 'blue', 'orange']
     e1, e2, e3 = R_true.shape
 
