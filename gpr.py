@@ -54,11 +54,6 @@ class explorer:
         self.X, self.y = gprutils.prepare_training_data(X, y)
         self.fulldims = Xtest.shape[1:]
         self.Xtest = gprutils.prepare_test_data(Xtest)
-        # initialize the inducing inputs
-        #if not indpoints:
-            #indpoints = int(len(self.X)*5e-2)
-            #indpoints = 1500 if indpoints > 1500 else indpoints
-            #indpoints = 20 if indpoints == 0 else indpoints
         if indpoints > len(self.X):
             indpoints = len(self.X)
         self.Xu = self.X[::len(self.X) // indpoints]
@@ -94,7 +89,7 @@ class explorer:
             sgpr.cuda()
         optimizer = torch.optim.Adam(sgpr.parameters(), lr=learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
-        losses, lscales, noise_all = [], [], []
+        losses, lscales, noise_all, amp_all = [], [], [], []
         num_steps = steps
         start_time = time.time()
         print('Model training...')
@@ -106,14 +101,13 @@ class explorer:
             losses.append(loss.item())
             lscales.append(sgpr.kernel.lengthscale.tolist())
             noise_all.append(sgpr.noise.item())
+            amp_all.append(sgpr.kernel.variance.item())
             if self.verbose and (i % 100 == 0 or i == num_steps - 1):
                 print('iter: {} ...'.format(i),
                     'loss: {} ...'.format(np.around(losses[-1], 4)),
-                    'amp: {} ...'.format(
-                        np.around(sgpr.kernel.variance.item(), 4)),
-                    'length: {} ...'.format(
-                        np.around(sgpr.kernel.lengthscale.tolist(), 4)),
-                    'noise: {} ...'.format(np.around(sgpr.noise.item(), 7)))
+                    'amp: {} ...'.format(np.around(amp_all[-1], 4)),
+                    'length: {} ...'.format(np.around(lscales[-1], 4)),
+                    'noise: {} ...'.format(np.around(noise_all[-1], 7)))
             if i == 100:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
@@ -127,8 +121,12 @@ class explorer:
             ))
         if self.use_gpu:
             sgpr.cpu()
-
-        return sgpr, lscales, noise_all, losses
+        hyperparams = {
+            "lengthscale": lscales,
+            "noise": noise_all,
+            "variance": amp_all
+        }
+        return sgpr, losses, hyperparams
 
     def sgpr_predict(self, model, num_batches=10):
         """
