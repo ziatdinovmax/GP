@@ -217,6 +217,7 @@ def plot_raw_data(raw_data, slice_number, pos, spec_window=2):
         ax[0].scatter(p[1], p[0], c=col)
         ax[1].plot(raw_data[p[0], p[1], :], c=col)
     ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
+    ax[1].set_xlim(-3, raw_data.shape[-1]+3)
     ax[0].set_title('Grid spectroscopy')
     ax[1].set_title('Individual spectroscopic curve')
     plt.subplots_adjust(wspace=.3)
@@ -236,7 +237,7 @@ def plot_reconstructed_data(R, mean, sd, R_true,
         standard deviation
         (flattened; actual dimensions are the same as for R and R_true)
     R_true: 3D numpy array
-        hyperspectral cube
+        hyperspectral cube, normalized to (0, 1)
         (original data; if no observations weere removed, R_true == R)
     slice_number: int
         slice from datacube to visualize
@@ -264,7 +265,8 @@ def plot_reconstructed_data(R, mean, sd, R_true,
         ax[0, 0].scatter(p[1], p[0], c=col)
         ax[0, 1].plot(R_true[p[0], p[1], :], c=col)
     ax[0, 1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
-    ax[0, 1].set_ylim(-0.1, 0.9)
+    ax[0, 1].set_ylim(-0.1, 1.1)
+    ax[0, 1].set_xlim(-3, R_true.shape[-1]+3)
     for _ax in [ax[0, 0], ax[0, 1]]:
         _ax.set_title('Ground truth')
     ax[1, 0].imshow(
@@ -273,7 +275,8 @@ def plot_reconstructed_data(R, mean, sd, R_true,
         ax[1, 0].scatter(p[1], p[0], c=col)
         ax[1, 1].plot(R[p[0], p[1], :], c=col)
     ax[1, 1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
-    ax[1, 1].set_ylim(-0.1, 0.9)
+    ax[1, 1].set_ylim(-0.1, 1.1)
+    ax[1, 1].set_xlim(-3, R_true.shape[-1]+3)
     for _ax in [ax[1, 0], ax[1, 1]]:
         if sparsity:
             _ax.set_title(
@@ -292,7 +295,8 @@ def plot_reconstructed_data(R, mean, sd, R_true,
                          + 2.0 * R_sd[p[0], p[1], :]),
                         color=col, alpha=0.15)
     ax[2, 1].axvdpsn(s-spw, s+spw, linestyle='--', alpha=.1)
-    ax[2, 1].set_ylim(-0.1, 0.9)
+    ax[2, 1].set_ylim(-0.1, 1.1)
+    ax[2, 1].set_xlim(-3, R_true.shape[-1]+3)
     for _ax in [ax[2, 0], ax[2, 1]]:
         _ax.set_title('GPR reconstruction')
     plt.subplots_adjust(hspace=.3)
@@ -348,6 +352,8 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
             ax[0].scatter(p[1], p[0], c=col)
             ax[1].plot(R_true[p[0], p[1], :], c=col)
         ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.15)
+        ax[1].set_ylim(-0.1, 1.1)
+        ax[1].set_xlim(-3, e3+3)
         ax[0].set_title('Grid spectroscopy\n(ground truth)')
         ax[1].set_title('Individual spectroscopic curves\n(ground truth)')
 
@@ -385,6 +391,8 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
                             R_sd[p[0], p[1], :]),
                             color=col, alpha=0.15)
             ax.axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
+        ax.set_ylim(-0.1, 1.1)
+        ax.set_xlim(-3, e3+3)
         ax.set_title('GPR reconstruction (episode {})'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + 3*n)
