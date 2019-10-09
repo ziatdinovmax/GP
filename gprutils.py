@@ -216,7 +216,7 @@ def plot_raw_data(raw_data, slice_number, pos, spec_window=2):
     for p, col in zip(pos, my_colors):
         ax[0].scatter(p[1], p[0], c=col)
         ax[1].plot(raw_data[p[0], p[1], :], c=col)
-    ax[1].axvspan(s-spw, s+spw, linestyle='--')
+    ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
     ax[0].set_title('Grid spectroscopy')
     ax[1].set_title('Individual spectroscopic curve')
     plt.subplots_adjust(wspace=.3)
