@@ -237,7 +237,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
         for p, col in zip(pos, _colors):
             ax[0].scatter(p[1], p[0], c=col)
             ax[1].plot(R_true[p[0], p[1], :], c=col)
-        ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.25)
+        ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
         ax[0].set_title('Grid spectroscopy\n(ground truth)')
         ax[1].set_title('Individual spectroscopic curves\n(ground truth)')
 
@@ -274,7 +274,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
                             (Rtest[p[0], p[1], :] + 2.0 *
                             R_sd[p[0], p[1], :]),
                             color=col, alpha=0.15)
-            ax.axvspan(s-spw, s+spw, linestyle='--', alpha=.25)
+            ax.axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
         ax.set_title('Uncertainty episode {}'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + 3*n)
