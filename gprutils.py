@@ -237,7 +237,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
         for p, col in zip(pos, _colors):
             ax[0].scatter(p[1], p[0], c=col)
             ax[1].plot(R_true[p[0], p[1], :], c=col)
-        ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
+        ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.15)
         ax[0].set_title('Grid spectroscopy\n(ground truth)')
         ax[1].set_title('Individual spectroscopic curves\n(ground truth)')
 
@@ -252,7 +252,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
 
         ax = fig.add_subplot(4, n, i)
         ax.imshow(np.sum(Rcurr[:, :, s-spw:s+spw], axis=-1), cmap='jet')
-        ax.set_title('Observations episode {}'.format(episodes[i-1]))
+        ax.set_title('Observations (episode {})'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + n)
         Rtest_to_plot = copy.deepcopy((np.sum(Rtest[:, :, s-spw:s+spw], axis=-1)))
@@ -264,7 +264,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
         ax.imshow(Rtest_to_plot, cmap='jet')
         for p, col in zip(pos, _colors):
             ax.scatter(p[1], p[0], c=col)
-        ax.set_title('GPR reconstruction episode {}'.format(episodes[i-1]))
+        ax.set_title('GPR reconstruction (episode {})'.format(episodes[i-1]))
         ax = fig.add_subplot(4, n, i + 2*n)
         for p, col in zip(pos, _colors):
             ax.plot(Rtest[p[0], p[1], :], c=col)
@@ -275,14 +275,14 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
                             R_sd[p[0], p[1], :]),
                             color=col, alpha=0.15)
             ax.axvspan(s-spw, s+spw, linestyle='--', alpha=.1)
-        ax.set_title('Uncertainty episode {}'.format(episodes[i-1]))
+        ax.set_title('GPR reconstruction (episode {})'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + 3*n)
         R_sd_to_plot = copy.deepcopy(R_sd)
         R_sd_to_plot = np.sum(R_sd_to_plot, axis=-1)
         R_sd_to_plot[~mask] = np.nan
         ax.imshow(R_sd_to_plot, cmap='jet')
-        ax.set_title('Integrated uncertainty\nepisode {}'.format(episodes[i-1]))
+        ax.set_title('Integrated uncertainty (episode {})'.format(episodes[i-1]))
 
     plt.subplots_adjust(hspace=.3)
     plt.subplots_adjust(wspace=.3)
