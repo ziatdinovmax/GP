@@ -251,11 +251,11 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
         R_sd = sd_all[episodes[i-1]].reshape(e1, e2, e3)
 
         ax = fig.add_subplot(4, n, i)
-        ax.imshow(np.sum(Rcurr[:, :, s-spw:s+spw], axis=1), cmap='jet')
+        ax.imshow(np.sum(Rcurr[:, :, s-spw:s+spw], axis=-1), cmap='jet')
         ax.set_title('Observations episode {}'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + n)
-        Rtest_to_plot = copy.deepcopy((np.sum(Rtest[:, :, s-spw:s+spw])))
+        Rtest_to_plot = copy.deepcopy((np.sum(Rtest[:, :, s-spw:s+spw], axis=-1)))
         mask = np.zeros(Rtest_to_plot.shape, bool)
         mask[dist_edge[0]:e1-dist_edge[0],
              dist_edge[1]:e2-dist_edge[1]] = True
@@ -274,7 +274,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
                             (Rtest[p[0], p[1], :] + 2.0 *
                             R_sd[p[0], p[1], :]),
                             color=col, alpha=0.15)
-            ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.25)
+            ax.axvspan(s-spw, s+spw, linestyle='--', alpha=.25)
         ax.set_title('Uncertainty episode {}'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + 3*n)
