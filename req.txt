@@ -3,5 +3,6 @@ numpy==1.16.5
 matplotlib==3.1.1
 jupyterlab==1.0.1
 torch==1.2.0
+gpytorch==0.3.5
 pyro-ppl==0.4.1
 nanonispy==1.0.6
