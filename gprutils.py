@@ -475,7 +475,7 @@ def plot_inducing_points(hyperparams, **kwargs):
     )
     for xyz, c in zip(learned_inducing_points[plot_from:plot_to], colors):
         x, y, z = xyz.T
-        ax.scatter(x, y, z, c=[c], s=.25)
+        ax.scatter(x, y, z, c=[c], s=.15)
     clrbar = np.linspace(
         0, len(learned_inducing_points[plot_from:plot_to])).reshape(-1, 1)
     ax2 = fig.add_axes([.37, .1, .1, .8])
