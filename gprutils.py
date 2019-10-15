@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import pyro
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def max_uncertainty(sd, dist_edge):
@@ -435,4 +436,51 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
 
     plt.subplots_adjust(hspace=.3)
     plt.subplots_adjust(wspace=.3)
+    plt.show()
+    
+
+def plot_inducing_points(hyperparams, **kwargs):
+    """
+    Plots 3D trajectories if inducing points
+
+    Args:
+        hyperparams: dict
+            dictionary of hyperparameters
+    **Kwargs:
+        plot_from: int
+            plot from specific step
+        plot_to: int
+            plot till specific step
+    """
+    learned_inducing_points = hyperparams['inducing_points']
+    plot_from, plot_to = kwargs.get('plot_to'), kwargs.get('plot_from')
+    if plot_from is None:
+        plot_from = 0
+    if plot_to is None:
+        plot_to = len(learned_inducing_points)
+    fig = plt.figure(figsize = (22, 9))
+    ax = fig.add_subplot(121, projection = '3d')
+    ax.view_init(20, 30)
+    ax.set_xlabel('x coordinate (px)', fontsize=14)
+    ax.set_ylabel('y coordinate (px)', fontsize=14)
+    ax.set_zlabel('frequency (px)', fontsize=14)
+    ax.xaxis.labelpad = 10
+    ax.yaxis.labelpad = 10
+    ax.zaxis.labelpad = 5
+    ax.set_title('Evolution of inducing points', fontsize=16)
+    ax.dist = 10 # use it to zoom in/out
+    ax.set_aspect('equal')
+    colors = plt.cm.jet(
+        np.linspace(0,1,len(learned_inducing_points[plot_from:plot_to]))
+    )
+    for xyz, c in zip(learned_inducing_points[plot_from:plot_to], colors):
+        x, y, z = xyz.T
+        ax.scatter(x, y, z, c=[c], s=.25)
+    clrbar = np.linspace(
+        0, len(learned_inducing_points[plot_from:plot_to])).reshape(-1, 1)
+    ax2 = fig.add_axes([.37, .1, .1, .8])
+    img = plt.imshow(clrbar, cmap="jet")
+    plt.gca().set_visible(False)
+    clrbar_ = plt.colorbar(img, ax=ax2, orientation='vertical')
+    clrbar_.set_label('SVI iterations', fontsize=14, labelpad=10)
     plt.show()

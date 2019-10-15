@@ -91,6 +91,7 @@ class explorer:
         optimizer = torch.optim.Adam(sgpr.parameters(), lr=learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
         losses, lscales, noise_all, amp_all = [], [], [], []
+        indpoints_all = []
         num_steps = steps
         start_time = time.time()
         print('Model training...')
@@ -103,6 +104,7 @@ class explorer:
             lscales.append(sgpr.kernel.lengthscale.tolist())
             noise_all.append(sgpr.noise.item())
             amp_all.append(sgpr.kernel.variance.item())
+            indpoints_all.append(sgpr.Xu.detach().cpu().numpy())
             if self.verbose and (i % 100 == 0 or i == num_steps - 1):
                 print('iter: {} ...'.format(i),
                     'loss: {} ...'.format(np.around(losses[-1], 4)),
@@ -125,7 +127,8 @@ class explorer:
         hyperparams = {
             "lengthscale": lscales,
             "noise": noise_all,
-            "variance": amp_all
+            "variance": amp_all,
+            "inducing_points": indpoints_all
         }
         return sgpr, losses, hyperparams
 
