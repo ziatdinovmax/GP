@@ -151,7 +151,7 @@ def prepare_test_data(X):
     return X
 
 
-def corrupt_data_xy(X_true, R_true, prob=0.5):
+def corrupt_data_xy(X_true, R_true, prob=0.5, replace_w_zeros=False):
     """
     Replaces certain % of data with NaNs.
     Applies differently in xy and in z dimensions.
@@ -186,6 +186,9 @@ def corrupt_data_xy(X_true, R_true, prob=0.5):
     X = X_true.copy().reshape(3, e1*e2, e3)
     X[:, indices, :] = np.nan
     X = X.reshape(3, e1, e2, e3)
+    if replace_w_zeros:
+        X = np.nan_to_num(X)
+        R = np.nan_to_num(R)
     return X, R
 
 
