@@ -26,10 +26,7 @@ def max_uncertainty(sd, dist_edge):
     e1, e2 = sd.shape[:2]
     sd = np.sum(sd, axis=-1)
     # mask the edges
-    mask = np.zeros(sd.shape, bool)
-    mask[dist_edge[0]:e1-dist_edge[0],
-         dist_edge[1]:e2-dist_edge[1]] = True
-    sd = sd * mask
+    sd = mask_edges(sd, dist_edge)
     # find first 100 points with the largest uncertainty
     amax_list, uncert_list = [], []
     for i in range(100):
@@ -39,6 +36,26 @@ def max_uncertainty(sd, dist_edge):
         sd[amax[0], amax[1]] = 0
 
     return amax_list, uncert_list
+
+
+def mask_edges(imgdata, dist_edge):
+    """
+    Masks edges of 2D image
+    
+    Args:
+        imgdata: 2D numpy array
+            image whose edges we want to mask
+        dist_edge: list of two integers
+            distance from edges for masking
+    
+    Returns:
+        2D numpy array with edge regions removed
+    """
+    e1, e2 = imgdata.shape
+    mask = np.zeros((e1, e2), bool)
+    mask[dist_edge[0]:e1-dist_edge[0],
+        dist_edge[1]:e2-dist_edge[1]] = True
+    return imgdata * mask
 
 
 def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list):
