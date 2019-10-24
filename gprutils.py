@@ -222,7 +222,8 @@ def plot_kernel_hyperparams(hyperparams):
     plt.show()
 
 
-def plot_raw_data(raw_data, slice_number, pos, spec_window=2, norm=False):
+def plot_raw_data(raw_data, slice_number, pos,
+                  spec_window=2, norm=False, **kwargs):
     """
     Plots hyperspectral data as 2D image
     integrated over a certain range of energy/frequency
@@ -238,7 +239,19 @@ def plot_raw_data(raw_data, slice_number, pos, spec_window=2, norm=False):
             single spectroscopic curves will be extracted and visualized
         spec_window: int
             window to integrate over in frequency dimension (for 2D "slices")
+    
+    **Kwargs:
+        z_vec: 1D ndarray
+            spectroscopic measurements values (e.g. frequency, bias)
+        z_vec_label: str
+            spectroscopic measurements label (e.g. frequency, bias voltage)
+        z_vec_units: str
+            spectroscopic measurements units (e.g. Hz, V)
     """
+    z_vec = kwargs.get('z_vec')
+    z_vec_label = kwargs.get('z_vec_label')
+    z_vec_units = kwargs.get('z_vec_units')
+    z_vec = np.arange(raw_data.shape[-1]) if z_vec is None else z_vec
     # colors sequence
     my_colors = ['black', 'red', 'green', 'gray', 'orange', 'blue']
     # Plotting
@@ -248,13 +261,16 @@ def plot_raw_data(raw_data, slice_number, pos, spec_window=2, norm=False):
     ax[0].imshow(np.sum(raw_data[:, :, s-spw:s+spw], axis=-1), cmap='magma')
     for p, col in zip(pos, my_colors):
         ax[0].scatter(p[1], p[0], c=col)
-        ax[1].plot(raw_data[p[0], p[1], :], c=col)
-    ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.2)
+        ax[1].plot(z_vec, raw_data[p[0], p[1], :], c=col)
+    conv_coef = 1 if z_vec is None else z_vec[-1] / raw_data.shape[-1]
+    ax[1].axvspan(z_vec[s-spw], z_vec[s+spw], linestyle='--', alpha=.2)
     if norm:
         ax[1].set_ylim(-0.1, 1.1)
-    ax[1].set_xlim(-3, raw_data.shape[-1]+3)
-    ax[0].set_title('Grid spectroscopy')
-    ax[1].set_title('Individual spectroscopic curve')
+    if z_vec_label is not None and z_vec_units is not None:
+        ax[1].set_xlabel(z_vec_label+', '+z_vec_units)
+        ax[1].set_ylabel('Response (arb. units)')
+    ax[0].set_title('Grid spectroscopy data')
+    ax[1].set_title('Individual spectroscopic curves')
     plt.subplots_adjust(wspace=.3)
     plt.show()
 
@@ -285,8 +301,18 @@ def plot_reconstructed_data(R, mean, sd, R_true,
     **Kwargs:
         sparsity: float (between 0 and 1)
             indicates % of data points removed (used only for figure title)
+        z_vec: 1D ndarray
+            spectroscopic measurements values (e.g. frequency, bias)
+        z_vec_label: str
+            spectroscopic measurements label (e.g. frequency, bias voltage)
+        z_vec_units: str
+            spectroscopic measurements units (e.g. Hz, V)
     """
     sparsity = kwargs.get('sparsity')
+    z_vec = kwargs.get('z_vec')
+    z_vec_label = kwargs.get('z_vec_label')
+    z_vec_units = kwargs.get('z_vec_units')
+    z_vec = np.arange(R_true.shape[-1]) if z_vec is None else z_vec
     s = slice_number
     e1, e2, e3 = R_true.shape
     spw = spec_window
@@ -298,20 +324,24 @@ def plot_reconstructed_data(R, mean, sd, R_true,
         np.sum(R_true[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
     for p, col in zip(pos, my_colors):
         ax[0, 0].scatter(p[1], p[0], c=col)
-        ax[0, 1].plot(R_true[p[0], p[1], :], c=col)
-    ax[0, 1].axvspan(s-spw, s+spw, linestyle='--', alpha=.15)
+        ax[0, 1].plot(z_vec, R_true[p[0], p[1], :], c=col)
+    ax[0, 1].axvspan(z_vec[s-spw], z_vec[s+spw], linestyle='--', alpha=.15)
     ax[0, 1].set_ylim(-0.1, 1.1)
-    ax[0, 1].set_xlim(-3, e3+3)
+    if z_vec_label is not None and z_vec_units is not None:
+        ax[0, 1].set_xlabel(z_vec_label+', '+z_vec_units)
+        ax[0, 1].set_ylabel('Response (arb. units)')
     for _ax in [ax[0, 0], ax[0, 1]]:
         _ax.set_title('Ground truth')
     ax[1, 0].imshow(
         np.sum(R[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
     for p, col in zip(pos, my_colors):
         ax[1, 0].scatter(p[1], p[0], c=col)
-        ax[1, 1].plot(R[p[0], p[1], :], c=col)
-    ax[1, 1].axvspan(s-spw, s+spw, linestyle='--', alpha=.15)
+        ax[1, 1].plot(z_vec, R[p[0], p[1], :], c=col)
+    ax[1, 1].axvspan(z_vec[s-spw], z_vec[s+spw], linestyle='--', alpha=.15)
     ax[1, 1].set_ylim(-0.1, 1.1)
-    ax[1, 1].set_xlim(-3, e3+3)
+    if z_vec_label is not None and z_vec_units is not None:
+        ax[1, 1].set_xlabel(z_vec_label+', '+z_vec_units)
+        ax[1, 1].set_ylabel('Response (arb. units)')
     for _ax in [ax[1, 0], ax[1, 1]]:
         if sparsity:
             _ax.set_title(
@@ -322,16 +352,18 @@ def plot_reconstructed_data(R, mean, sd, R_true,
         np.sum(Rtest[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
     for p, col in zip(pos, my_colors):
         ax[2, 0].scatter(p[1], p[0], c=col)
-        ax[2, 1].plot(Rtest[p[0], p[1], :], c=col)
-        ax[2, 1].fill_between(np.arange(e3),
+        ax[2, 1].plot(z_vec, Rtest[p[0], p[1], :], c=col)
+        ax[2, 1].fill_between(z_vec,
                         (Rtest[p[0], p[1], :] -
                          2.0 * R_sd[p[0], p[1], :]),
                         (Rtest[p[0], p[1], :]
                          + 2.0 * R_sd[p[0], p[1], :]),
                         color=col, alpha=0.15)
-    ax[2, 1].axvspan(s-spw, s+spw, linestyle='--', alpha=.15)
+    ax[2, 1].axvspan(z_vec[s-spw], z_vec[s+spw], linestyle='--', alpha=.15)
     ax[2, 1].set_ylim(-0.1, 1.1)
-    ax[2, 1].set_xlim(-3, e3+3)
+    if z_vec_label is not None and z_vec_units is not None:
+        ax[2, 1].set_xlabel(z_vec_label+', '+z_vec_units)
+        ax[2, 1].set_ylabel('Response (arb. units)')
     for _ax in [ax[2, 0], ax[2, 1]]:
         _ax.set_title('GPR reconstruction')
     plt.subplots_adjust(hspace=.3)
@@ -340,7 +372,8 @@ def plot_reconstructed_data(R, mean, sd, R_true,
 
 def plot_exploration_results(R_all, mean_all, sd_all, R_true,
                              episodes, slice_number, pos, dist_edge,
-                             spec_window=2, mask_predictions=False):
+                             spec_window=2, mask_predictions=False,
+                             **kwargs):
     """
     Plots predictions at different stages ("episodes")
     of max uncertainty-based sample exploration
@@ -370,31 +403,46 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
             mask edge regions not used in max uncertainty evaluation
             in predictive mean plots
 
+        **Kwargs:
+        sparsity: float (between 0 and 1)
+            indicates % of data points removed (used only for figure title)
+        z_vec: 1D ndarray
+            spectroscopic measurements values (e.g. frequency, bias)
+        z_vec_label: str
+            spectroscopic measurements label (e.g. frequency, bias voltage)
+        z_vec_units: str
+            spectroscopic measurements units (e.g. Hz, V)
+
         Returns:
             Plot the results of exploration analysis for the selected steps
     """
 
     s = slice_number
     spw = spec_window
-    _colors = ['black', 'red', 'green', 'blue', 'orange']
     e1, e2, e3 = R_true.shape
-
+    z_vec = kwargs.get('z_vec')
+    z_vec_label = kwargs.get('z_vec_label')
+    z_vec_units = kwargs.get('z_vec_units')
+    z_vec = np.arange(e3) if z_vec is None else z_vec
+    _colors = ['black', 'red', 'green', 'blue', 'orange']
     # plot ground truth data if available
     if not np.isnan(R_true).any() or np.unique(R_true).any():
-        _, ax = plt.subplots(1, 2, figsize=(7, 3))
+        _, ax = plt.subplots(1, 2, figsize=(7, 3), dpi=100)
         ax[0].imshow(np.sum(R_true[:, :, s-spw:s+spw], axis=-1), cmap='jet')
         for p, col in zip(pos, _colors):
             ax[0].scatter(p[1], p[0], c=col)
-            ax[1].plot(R_true[p[0], p[1], :], c=col)
-        ax[1].axvspan(s-spw, s+spw, linestyle='--', alpha=.2)
+            ax[1].plot(z_vec, R_true[p[0], p[1], :], c=col)
+        ax[1].axvspan(z_vec[s-spw], z_vec[s+spw], linestyle='--', alpha=.2)
         ax[1].set_ylim(-0.1, 1.1)
-        ax[1].set_xlim(-3, e3+3)
+        if z_vec_label is not None and z_vec_units is not None:
+            ax[1].set_xlabel(z_vec_label+', '+z_vec_units)
+            ax[1].set_ylabel('Response (arb. units)')
         ax[0].set_title('Grid spectroscopy\n(ground truth)')
         ax[1].set_title('Individual spectroscopic curves\n(ground truth)')
 
     # Plot predictions
     n = len(episodes) + 1
-    fig = plt.figure(figsize=(20, 16))
+    fig = plt.figure(figsize=(20, 17), dpi=100)
 
     for i in range(1, n):
         Rcurr = R_all[episodes[i-1]].reshape(e1, e2, e3)
@@ -403,7 +451,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
 
         ax = fig.add_subplot(4, n, i)
         ax.imshow(np.sum(Rcurr[:, :, s-spw:s+spw], axis=-1), cmap='jet')
-        ax.set_title('Observations (episode {})'.format(episodes[i-1]))
+        ax.set_title('Observations (step {})'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + n)
         Rtest_to_plot = copy.deepcopy((np.sum(Rtest[:, :, s-spw:s+spw], axis=-1)))
@@ -415,29 +463,31 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
         ax.imshow(Rtest_to_plot, cmap='jet')
         for p, col in zip(pos, _colors):
             ax.scatter(p[1], p[0], c=col)
-        ax.set_title('GPR reconstruction (episode {})'.format(episodes[i-1]))
+        ax.set_title('GPR reconstruction (step {})'.format(episodes[i-1]))
         ax = fig.add_subplot(4, n, i + 2*n)
         for p, col in zip(pos, _colors):
-            ax.plot(Rtest[p[0], p[1], :], c=col)
-            ax.fill_between(np.arange(e3),
+            ax.plot(z_vec, Rtest[p[0], p[1], :], c=col)
+            ax.fill_between(z_vec,
                             (Rtest[p[0], p[1], :] - 2.0 *
                             R_sd[p[0], p[1], :]),
                             (Rtest[p[0], p[1], :] + 2.0 *
                             R_sd[p[0], p[1], :]),
                             color=col, alpha=0.15)
-            ax.axvspan(s-spw, s+spw, linestyle='--', alpha=.15)
+            ax.axvspan(z_vec[s-spw], z_vec[s+spw], linestyle='--', alpha=.15)
         ax.set_ylim(-0.1, 1.1)
-        ax.set_xlim(-3, e3+3)
-        ax.set_title('GPR reconstruction (episode {})'.format(episodes[i-1]))
+        if z_vec_label is not None and z_vec_units is not None:
+            ax.set_xlabel(z_vec_label+', '+z_vec_units)
+            ax.set_ylabel('Response (arb. units)')
+        ax.set_title('GPR reconstruction (step {})'.format(episodes[i-1]))
 
         ax = fig.add_subplot(4, n, i + 3*n)
         R_sd_to_plot = copy.deepcopy(R_sd)
         R_sd_to_plot = np.sum(R_sd_to_plot, axis=-1)
         R_sd_to_plot[~mask] = np.nan
         ax.imshow(R_sd_to_plot, cmap='jet')
-        ax.set_title('Integrated uncertainty (episode {})'.format(episodes[i-1]))
+        ax.set_title('Integrated uncertainty (step {})'.format(episodes[i-1]))
 
-    plt.subplots_adjust(hspace=.3)
+    plt.subplots_adjust(hspace=.4)
     plt.subplots_adjust(wspace=.3)
     plt.show()
     
