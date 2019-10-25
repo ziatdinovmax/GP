@@ -14,8 +14,8 @@ def max_uncertainty(sd, dist_edge):
     Finds first 100 points with maximum uncertainty
 
     Args:
-        sd: (N,) ndarray
-            predictive SD (N is equal to number of observation points)
+        sd: N x M x L ndarray
+            predicted SD
         dist_edge: list of two integers
             edge regions not considered for max uncertainty evaluation
 
