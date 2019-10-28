@@ -141,7 +141,7 @@ def prepare_training_data(X, y):
     """
 
     tor = lambda n: torch.from_numpy(n)
-    X = X.reshape(X.shape[0], X.shape[1]*X.shape[2]*X.shape[3]).T
+    X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = tor(X[~np.isnan(X).any(axis=1)])
     y = tor(y.flatten()[~np.isnan(y.flatten())])
 
@@ -162,7 +162,7 @@ def prepare_test_data(X):
         torch tensor with dimensions (N*M*L, c)
     """
 
-    X = X.reshape(X.shape[0], X.shape[1]*X.shape[2]*X.shape[3]).T
+    X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = torch.from_numpy(X)
 
     return X
