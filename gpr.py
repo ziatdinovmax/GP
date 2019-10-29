@@ -245,7 +245,11 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
             input_dim, lengthscale=lscale_
             ),
         'Matern52': gp.kernels.Matern52(
-            input_dim, lengthscale=lscale_)
+            input_dim, lengthscale=lscale_
+            ),
+        'Periodic': gp.kernels.Periodic(
+            input_dim, lengthscale=lscale_
+            )
     }
 
     try:
