@@ -1,12 +1,12 @@
 # GP
 Gaussian processes (GP) for microscopic measurements (so far running "synthetic experiments")
 
-To perform GP-based reconstruction of sparse hyperspectral data run
+To perform GP-based reconstruction of sparse 2D image or hyperspectral 3D data run
 ```
 python3 reconstruct.py <path/to/file.npy>
 ```
 
-To perform GP-based sample exploration based on the reduction of maximal uncertainty run 
+To perform GP-based sample exploration with hyperspectral (3D) measurements based on the reduction of maximal uncertainty run 
 ```
 python3 explore.py <path/to/file.npy>
 ```
