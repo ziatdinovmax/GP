@@ -524,7 +524,7 @@ def plot_inducing_points(hyperparams, **kwargs):
             plot every nth inducing point
     """
     learned_inducing_points = hyperparams['inducing_points']
-    indp_nth = kwargs["slice_step"]
+    indp_nth = kwargs.get('slice_step')
     plot_from, plot_to = kwargs.get('plot_to'), kwargs.get('plot_from')
     if plot_from is None:
         plot_from = 0
