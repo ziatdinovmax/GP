@@ -10,7 +10,7 @@ import pyro.distributions as dist
 import gprutils
 
 
-class explorer:
+class reconstructor:
     """
     Class for uncertainty exploration in datacubes with GP regression
 
@@ -273,3 +273,10 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
     )
 
     return kernel
+
+
+class explorer:
+    def __init__(self, X, y, Xtest, kernel, lengthscale,
+                 indpoints=1000, ldim=3, use_gpu=False, verbose=False):
+        print("Use gpr.reconstructor instead of gpr.explorer")
+        pass

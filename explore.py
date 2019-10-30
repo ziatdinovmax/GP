@@ -26,6 +26,9 @@ parser.add_argument("--LENGTH_CONSTR_MAX", nargs="?", default=20, type=int)
 parser.add_argument("--LEARNING_RATE", nargs="?", default=0.1, type=float,
                     help="Learning rate for each exploration step" +
                     "(decrease if it becomes unstable)")
+parser.add_argument("--INDUCING_POINTS_RATIO", nargs="?", default=50, type=int,
+                    help="ratio of total number of data points" +
+                    "to number of inducing points")
 parser.add_argument("--STEPS", nargs="?", default=1000, type=int,
                     help="Number of SVI steps during model training")
 parser.add_argument("--PROB", nargs="?", default=0.95, type=float,
@@ -61,9 +64,12 @@ if not os.path.exists(args.MDIR): os.makedirs(args.MDIR)
 for i in range(args.ESTEPS):
     print('Exploration step {}/{}'.format(i, args.ESTEPS))
     # Make the number of inducing points dependent on the number of datapoints
-    indpoints = len(gprutils.prepare_training_data(X, R)[0]) // 10
+    indpts_r = args.INDUCING_POINTS_RATIO
+    indpoints = len(gprutils.prepare_training_data(X, R)[0]) // indpts_r
+    # clip to make sure it fits into GPU memory
+    indpoints = 1500 if indpoints > 1500 else indpoints
     # Initialize explorer
-    bexplorer = gpr.explorer(
+    bexplorer = gpr.reconstructor(
         X, R, X_true, args.KERNEL, LENGTH_CONSTR,
         indpoints, use_gpu=args.USE_GPU)
     # get indices/value of a max uncertainty point

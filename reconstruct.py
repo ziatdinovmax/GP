@@ -47,14 +47,14 @@ X, R = gprutils.corrupt_data_xy(X_true, R_true, args.PROB)
 if not os.path.exists(args.MDIR):
     os.makedirs(args.MDIR)
 # Reconstruct the corrupt data. Initalize our "reconstructor" first.
-reconstructor = gpr.explorer(
+recnstr = gpr.reconstructor(
     X, R, X_true, args.KERNEL, LENGTH_CONSTR, args.INDUCING_POINTS,
     use_gpu=args.USE_GPU, verbose=True)
 # Model training
-model, losses, hyperparams = reconstructor.train_sgpr_model(
+model, losses, hyperparams = recnstr.train_sgpr_model(
     args.LEARNING_RATE, args.STEPS)
 # Model prediction
-mean, sd = reconstructor.sgpr_predict(model, num_batches=200)
+mean, sd = recnstr.sgpr_predict(model, num_batches=200)
 # Save results
 np.savez(os.path.join(args.MDIR, 'sgpr_reconstruction.npz'),
          mean=mean, sd=sd, hyperparams=hyperparams)
