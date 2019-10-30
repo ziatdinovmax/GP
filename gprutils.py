@@ -41,13 +41,13 @@ def max_uncertainty(sd, dist_edge):
 def mask_edges(imgdata, dist_edge):
     """
     Masks edges of 2D image
-    
+
     Args:
         imgdata: 2D numpy array
             image whose edges we want to mask
         dist_edge: list of two integers
             distance from edges for masking
-    
+
     Returns:
         2D numpy array with edge regions removed
     """
@@ -256,7 +256,7 @@ def plot_raw_data(raw_data, slice_number, pos,
             single spectroscopic curves will be extracted and visualized
         spec_window: int
             window to integrate over in frequency dimension (for 2D "slices")
-    
+
     **Kwargs:
         z_vec: 1D ndarray
             spectroscopic measurements values (e.g. frequency, bias)
@@ -279,7 +279,6 @@ def plot_raw_data(raw_data, slice_number, pos,
     for p, col in zip(pos, my_colors):
         ax[0].scatter(p[1], p[0], c=col)
         ax[1].plot(z_vec, raw_data[p[0], p[1], :], c=col)
-    conv_coef = 1 if z_vec is None else z_vec[-1] / raw_data.shape[-1]
     ax[1].axvspan(z_vec[s-spw], z_vec[s+spw], linestyle='--', alpha=.2)
     if norm:
         ax[1].set_ylim(-0.1, 1.1)
@@ -507,7 +506,7 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
     plt.subplots_adjust(hspace=.4)
     plt.subplots_adjust(wspace=.3)
     plt.show()
-    
+
 
 def plot_inducing_points(hyperparams, **kwargs):
     """
@@ -539,7 +538,7 @@ def plot_inducing_points(hyperparams, **kwargs):
     ax.zaxis.labelpad = 5
     ax.set_title('Evolution of inducing points', fontsize=16)
     ax.dist = 10 # use it to zoom in/out
-    ax.set_aspect('equal')
+    # ax.set_aspect('equal') doesn't work in matplotlib 3.1.1
     colors = plt.cm.jet(
         np.linspace(0,1,len(learned_inducing_points[plot_from:plot_to]))
     )
