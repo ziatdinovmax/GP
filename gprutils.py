@@ -520,13 +520,18 @@ def plot_inducing_points(hyperparams, **kwargs):
             plot from specific step
         plot_to: int
             plot till specific step
+        slice_step: int
+            plot every nth inducing point
     """
     learned_inducing_points = hyperparams['inducing_points']
+    indp_nth = kwargs["slice_step"]
     plot_from, plot_to = kwargs.get('plot_to'), kwargs.get('plot_from')
     if plot_from is None:
         plot_from = 0
     if plot_to is None:
         plot_to = len(learned_inducing_points)
+    if indp_nth is None:
+        indp_nth = 1
     fig = plt.figure(figsize = (22, 9))
     ax = fig.add_subplot(121, projection = '3d')
     ax.view_init(20, 30)
@@ -538,13 +543,13 @@ def plot_inducing_points(hyperparams, **kwargs):
     ax.zaxis.labelpad = 5
     ax.set_title('Evolution of inducing points', fontsize=16)
     ax.dist = 10 # use it to zoom in/out
-    # ax.set_aspect('equal') doesn't work in matplotlib 3.1.1
+    ax.set_aspect('auto')# 'equal' doesn't work in matplotlib 3.1.1
     colors = plt.cm.jet(
         np.linspace(0,1,len(learned_inducing_points[plot_from:plot_to]))
     )
     for xyz, c in zip(learned_inducing_points[plot_from:plot_to], colors):
         x, y, z = xyz.T
-        ax.scatter(x, y, z, c=[c], s=.15)
+        ax.scatter(x[::indp_nth], y[::indp_nth], z[::indp_nth], c=[c], s=.15)
     clrbar = np.linspace(
         0, len(learned_inducing_points[plot_from:plot_to])).reshape(-1, 1)
     ax2 = fig.add_axes([.37, .1, .1, .8])
