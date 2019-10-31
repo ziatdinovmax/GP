@@ -36,36 +36,54 @@ class reconstructor:
             prints statistics after each 100th training iteration
 
     Methods:
-        train_sgpr_model:
+        train:
             Training sparse GP regression model
-        sgpr_predict:
+        predict:
             Using trained GP regression model to make predictions
+        run:
+            Combines training and prediction to output mean, SD
+            and hyperaprameters as a function of SVI steps
         step:
             Combines a single model training and prediction
+            to find point with max uncertainty in the data
     """
     def __init__(self, X, y, Xtest, kernel, lengthscale,
                  indpoints=1000, ldim=3, use_gpu=False, verbose=False):
         if use_gpu and torch.cuda.is_available():
-            self.use_gpu = True
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+            use_gpu = True
         else:
-            self.use_gpu = False
             torch.set_default_tensor_type(torch.DoubleTensor)
-        self.X, self.y = gprutils.prepare_training_data(X, y)
+            use_gpu = False
+        X, y = gprutils.prepare_training_data(X, y)
+        if indpoints > len(X):
+            indpoints = len(X)
+        Xu = X[::len(X) // indpoints]
+        kernel = get_kernel(kernel, ldim, use_gpu, lengthscale=lengthscale)
         self.fulldims = Xtest.shape[1:]
         self.Xtest = gprutils.prepare_test_data(Xtest)
-        if indpoints > len(self.X):
-            indpoints = len(self.X)
-        self.Xu = self.X[::len(self.X) // indpoints]
-        if self.use_gpu:
-            self.X = self.X.cuda()
-            self.y = self.y.cuda()
+        if use_gpu:
+            X = X.cuda()
+            y = y.cuda()
             self.Xtest = self.Xtest.cuda()
-        self.kernel = get_kernel(
-            kernel, ldim, on_gpu=self.use_gpu, lengthscale=lengthscale)
+        self.sgpr = gp.models.SparseGPRegression(
+            X, y, kernel, Xu, jitter=1.0e-5)
+        print("# of inducing points for GP regression: {}".format(len(Xu)))
+        if use_gpu:
+            self.sgpr.cuda()
+        self.hyperparams = {}
+        self.losses = []
+        self.indpoints_all = []
+        self.lscales, self.noise_all, self.amp_all = [], [], []
+        self.hyperparams = {
+            "lengthscale": self.lscales,
+            "noise": self.noise_all,
+            "variance": self.amp_all,
+            "inducing_points": self.indpoints_all
+        }
         self.verbose = verbose
 
-    def train_sgpr_model(self, learning_rate=5e-2, steps=1000):
+    def train(self, learning_rate=5e-2, steps=1000):
         """
         Training sparse GP regression model
 
@@ -74,65 +92,43 @@ class reconstructor:
                 learning rate
             steps: int
                 number of SVI training iteratons
-
-        Returns:
-            Trained model (GPregression object), list of training losses,
-            dictionary with hyperparameter values for each step.
         """
         pyro.set_rng_seed(0)
         pyro.clear_param_store()
-        # initialize the model
-        print("# of inducing points for GP regression: {}".format(len(self.Xu)))
-        sgpr = gp.models.SparseGPRegression(
-            self.X, self.y, self.kernel, self.Xu, jitter=1.0e-5)
-        # learn the model parameters
-        if self.use_gpu:
-            sgpr.cuda()
-        optimizer = torch.optim.Adam(sgpr.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
-        losses, lscales, noise_all, amp_all = [], [], [], []
-        indpoints_all = []
         num_steps = steps
         start_time = time.time()
         print('Model training...')
         for i in range(num_steps):
             optimizer.zero_grad()
-            loss = loss_fn(sgpr.model, sgpr.guide)
+            loss = loss_fn(self.sgpr.model, self.sgpr.guide)
             loss.backward()
             optimizer.step()
-            losses.append(loss.item())
-            lscales.append(sgpr.kernel.lengthscale.tolist())
-            noise_all.append(sgpr.noise.item())
-            amp_all.append(sgpr.kernel.variance.item())
-            indpoints_all.append(sgpr.Xu.detach().cpu().numpy())
+            self.losses.append(loss.item())
+            self.lscales.append(self.sgpr.kernel.lengthscale.tolist())
+            self.noise_all.append(self.sgpr.noise.item())
+            self.amp_all.append(self.sgpr.kernel.variance.item())
+            self.indpoints_all.append(self.sgpr.Xu.detach().cpu().numpy())
             if self.verbose and (i % 100 == 0 or i == num_steps - 1):
                 print('iter: {} ...'.format(i),
-                    'loss: {} ...'.format(np.around(losses[-1], 4)),
-                    'amp: {} ...'.format(np.around(amp_all[-1], 4)),
-                    'length: {} ...'.format(np.around(lscales[-1], 4)),
-                    'noise: {} ...'.format(np.around(noise_all[-1], 7)))
+                      'loss: {} ...'.format(np.around(self.losses[-1], 4)),
+                      'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
+                      'length: {} ...'.format(np.around(self.lscales[-1], 4)),
+                      'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
             if i == 100:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
         print('training completed in {} s'.format(
             np.round(time.time() - start_time, 2)))
         print('Final parameter values:\n',
-            'amp: {}, lengthscale: {}, noise: {}'.format(
-                np.around(sgpr.kernel.variance.item(), 4),
-                np.around(sgpr.kernel.lengthscale.tolist(), 4),
-                np.around(sgpr.noise.item(), 7)
-            ))
-        if self.use_gpu:
-            sgpr.cpu()
-        hyperparams = {
-            "lengthscale": lscales,
-            "noise": noise_all,
-            "variance": amp_all,
-            "inducing_points": indpoints_all
-        }
-        return sgpr, losses, hyperparams
+              'amp: {}, lengthscale: {}, noise: {}'.format(
+                np.around(self.sgpr.kernel.variance.item(), 4),
+                np.around(self.sgpr.kernel.lengthscale.tolist(), 4),
+                np.around(self.sgpr.noise.item(), 7)))
+        return
 
-    def sgpr_predict(self, model, num_batches=10):
+    def predict(self, num_batches=10):
         """
         Use trained GPRegression model to make predictions
 
@@ -147,29 +143,46 @@ class reconstructor:
         Returns:
             predictive mean and variance
         """
-        print("Calculating predictive mean and variance...")
+        print("Calculating predictive mean and variance...", end=" ")
         # Prepare for inference
         batch_range = len(self.Xtest) // num_batches
         mean = np.zeros((self.Xtest.shape[0]))
         sd = np.zeros((self.Xtest.shape[0]))
-        if self.use_gpu:
-            model.cuda()
         # Run inference batch-by-batch
         for i in range(num_batches):
             Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
             with torch.no_grad():
-                mean_i, cov = model(Xtest_i, full_cov=True, noiseless=False)
+                mean_i, cov = self.sgpr(Xtest_i, full_cov=True, noiseless=False)
             sd_i = cov.diag().sqrt()
             mean[i*batch_range:(i+1)*batch_range] = mean_i.cpu().numpy()
             sd[i*batch_range:(i+1)*batch_range] = sd_i.cpu().numpy()
-        if self.use_gpu:
-            model.cpu()
-
+        print("Done")
         return mean, sd
+
+    def run(self, learning_rate=5e-2, steps=1000, num_batches=10):
+        """
+        Train the initialized model and calculate predictive mean and variance
+
+        Args:
+            learning_rate: float
+                learning rate for GPR model training
+            steps: int
+                number of SVI training iteratons
+            num_batches: int
+                number of batches for splitting the Xtest array
+
+        Returns:
+            predictive mean and SD as flattened ndarrays
+            dictionary with hyperparameters as a function of SVI steps
+
+        """
+        self.train(learning_rate, steps)
+        return self.predict(num_batches), self.hyperparams
 
     def step(self, learning_rate, steps, dist_edge, num_batches=100):
         """
-        Finds new point with maximum uncertainty
+        Performs single train-predict step for exploration analysis
+        returning new point with maximum uncertainty
 
         Args:
             learning_rate: float
@@ -186,14 +199,23 @@ class reconstructor:
 
         """
         # train a model
-        model = self.train_sgpr_model(learning_rate, steps)[0]
+        self.train(learning_rate, steps)
         # make prediction
-        mean, sd = self.sgpr_predict(model, num_batches)
+        mean, sd = self.predict(num_batches)
         # find point with maximum uncertainty
         sd_ = sd.reshape(self.fulldims[0], self.fulldims[1], self.fulldims[2])
         amax, uncert_list = gprutils.max_uncertainty(sd_, dist_edge)
-
         return amax, uncert_list, mean, sd
+
+    def train_sgpr_model(self, learning_rate=5e-2, steps=1000):
+        print("Use reconstructor.run instead of reconstructor.train_sgpr_model",
+        "and reconstructor.sgpr_predict to obtain mean, sd and hyperparameters")
+        pass
+
+    def sgpr_predict(self, model, num_batches=10):
+        print("Use reconstructor.run instead of reconstructor.train_sgpr_model",
+        "and reconstructor.sgpr_predict to obtain mean, sd and hyperparameters")
+        pass
 
 
 def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
@@ -225,9 +247,10 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
     Returns:
         kernel object
     """
-
-    if on_gpu:
+    if on_gpu and torch.cuda.is_available():
         torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+    else:
+        torch.set_default_tensor_type(torch.DoubleTensor)
 
     amp = kwargs.get('amplitude') if 'amplitude' in kwargs else [1e-4, 10.]
     len_dim = kwargs.get('len_dim') if 'len_dim' in kwargs else input_dim
