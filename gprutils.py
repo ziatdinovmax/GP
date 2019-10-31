@@ -214,9 +214,13 @@ def corrupt_image2d(X_true, R_true, prob, replace_w_zeros):
         and M x N ndarray of observatons where
         certain % of points is replaced with NaNs
     """
-
-    pyro.set_rng_seed(0)
     e1, e2 = R_true.shape
+    if np.isnan(R_true).any():
+        X = X_true.copy().reshape(2, e1*e2)
+        X[:, np.where(np.isnan((R_true.flatten())))] = np.nan
+        X = X.reshape(2, e1, e2)
+        return X, R_true
+    pyro.set_rng_seed(0)
     brn = pyro.distributions.Bernoulli(prob)
     indices = [i for i in range(e1*e2) if brn.sample() == 1]
     R = R_true.copy().reshape(e1*e2)
@@ -257,9 +261,14 @@ def corrupt_image3d(X_true, R_true, prob, replace_w_zeros):
         (note that for every corrupted (x, y) point
         we remove all z values associated with this point)
     """
-
-    pyro.set_rng_seed(0)
     e1, e2, e3 = R_true.shape
+    if np.isnan(R_true).any():
+        X = X_true.copy().reshape(3, e1*e2, e3)
+        indices = np.where(np.isnan((R_true.reshape(e1*e2, e3))))
+        X[:, indices] = np.nan
+        X = X.reshape(3, e1, e2, e3)
+        return X, R_true
+    pyro.set_rng_seed(0)
     brn = pyro.distributions.Bernoulli(prob)
     indices = [i for i in range(e1*e2) if brn.sample() == 1]
     R = R_true.copy().reshape(e1*e2, e3)
