@@ -20,6 +20,7 @@ parser.add_argument("--LENGTH_CONSTR_MAX", nargs="?", default=20, type=int)
 parser.add_argument("--LEARNING_RATE", nargs="?", default=0.05, type=float)
 parser.add_argument("--INDUCING_POINTS", nargs="?", default=250, type=int)
 parser.add_argument("--STEPS", nargs="?", default=1000, type=int)
+parser.add_argument("--NUM_BATCHES", nargs="?", default=200, type=int)
 parser.add_argument("--PROB", nargs="?", default=0.0, type=float,
                     help="Value between 0 and 1." +
                     "Controls number of data points to be removed.")
@@ -38,23 +39,28 @@ LENGTH_CONSTR = [
 R_true = np.load(args.FILEPATH)
 R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
 # Get "ground truth" grid indices
-e1, e2, e3 = R_true.shape
-c1, c2, c3 = np.mgrid[:e1:1., :e2:1., :e3:1.]
-X_true = np.array([c1, c2, c3])
-# Corrupt data
+if np.ndim(R_true) == 2:
+    e1, e2 = R_true.shape
+    c1, c2 = np.mgrid[:e1:1., :e2:1.]
+    X_true = np.array([c1, c2])
+elif np.ndim(R_true) == 3:
+    e1, e2, e3 = R_true.shape
+    c1, c2, c3 = np.mgrid[:e1:1., :e2:1., :e3:1.]
+    X_true = np.array([c1, c2, c3])
+else:
+    raise NotImplementedError("The input ndarray must be 2D or 3D")
+# Corrupt data (if args.PROB > 0)
 X, R = gprutils.corrupt_data_xy(X_true, R_true, args.PROB)
 # Directory to save results
 if not os.path.exists(args.MDIR):
     os.makedirs(args.MDIR)
 # Reconstruct the corrupt data. Initalize our "reconstructor" first.
-recnstr = gpr.reconstructor(
+reconstr = gpr.reconstructor(
     X, R, X_true, args.KERNEL, LENGTH_CONSTR, args.INDUCING_POINTS,
     use_gpu=args.USE_GPU, verbose=True)
-# Model training
-model, losses, hyperparams = recnstr.train_sgpr_model(
-    args.LEARNING_RATE, args.STEPS)
-# Model prediction
-mean, sd = recnstr.sgpr_predict(model, num_batches=200)
+# Model training and prediction
+mean, sd, hyperparams = reconstr.run(
+    args.LEARNING_RATE, args.STEPS, args.NUM_BATCHES)
 # Save results
 np.savez(os.path.join(args.MDIR, 'sgpr_reconstruction.npz'),
          mean=mean, sd=sd, hyperparams=hyperparams)
