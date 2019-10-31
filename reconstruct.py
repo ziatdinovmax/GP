@@ -19,14 +19,15 @@ parser.add_argument("--LENGTH_CONSTR_MIN", nargs="?", default=1, type=int)
 parser.add_argument("--LENGTH_CONSTR_MAX", nargs="?", default=20, type=int)
 parser.add_argument("--LEARNING_RATE", nargs="?", default=0.05, type=float)
 parser.add_argument("--INDUCING_POINTS", nargs="?", default=250, type=int)
-parser.add_argument("--NORMALIZE", nargs="?", default=True, type=bool,
-                    help="Normalizes to [0, 1]")
+parser.add_argument("--NORMALIZE", nargs="?", default=1, type=int,
+                    help="Normalizes to [0, 1]. 1 is True, 0 is False")
 parser.add_argument("--STEPS", nargs="?", default=1000, type=int)
 parser.add_argument("--NUM_BATCHES", nargs="?", default=200, type=int)
 parser.add_argument("--PROB", nargs="?", default=0.0, type=float,
                     help="Value between 0 and 1." +
                     "Controls number of data points to be removed.")
-parser.add_argument("--USE_GPU", nargs="?", default=True, type=bool)
+parser.add_argument("--USE_GPU", nargs="?", default=1, type=int,
+                    help="1 for using GPU, 0 for running on CPU")
 parser.add_argument("--MDIR", nargs="?", default="Output", type=str,
                     help="directory to save outputs")
 
