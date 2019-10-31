@@ -35,7 +35,7 @@ args = parser.parse_args()
 
 # Load "ground truth" data (N x M x L spectroscopic grid)
 R_true = np.load(args.FILEPATH)
-if args.NORMALIZE:
+if args.NORMALIZE and np.isnan(R_true).any() == False:
     R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
 # Get "ground truth" grid indices
 if np.ndim(R_true) == 2:
