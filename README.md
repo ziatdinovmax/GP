@@ -7,6 +7,8 @@ cd GP
 pip install -r req.txt
 ```
 
+This is an active project so you may expect many sharp edges and some breaking changes.
+
 To perform GP-based reconstruction of sparse 2D image or hyperspectral 3D data, run
 ```
 python3 reconstruct.py <path/to/file.npy>
