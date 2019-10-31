@@ -57,7 +57,7 @@ if not os.path.exists(args.MDIR):
 # Reconstruct the corrupt data. Initalize our "reconstructor" first.
 reconstr = gpr.reconstructor(
     X, R, X_true, args.KERNEL, LENGTH_CONSTR, args.INDUCING_POINTS,
-    use_gpu=args.USE_GPU, verbose=True)
+    ldim=np.ndim(R_true), use_gpu=args.USE_GPU, verbose=True)
 # Model training and prediction
 mean, sd, hyperparams = reconstr.run(
     args.LEARNING_RATE, args.STEPS, args.NUM_BATCHES)
