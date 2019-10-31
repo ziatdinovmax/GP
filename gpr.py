@@ -72,7 +72,6 @@ class reconstructor:
         if use_gpu:
             self.sgpr.cuda()
         self.hyperparams = {}
-        self.losses = []
         self.indpoints_all = []
         self.lscales, self.noise_all, self.amp_all = [], [], []
         self.hyperparams = {
@@ -100,19 +99,20 @@ class reconstructor:
         num_steps = steps
         start_time = time.time()
         print('Model training...')
+        losses = []
         for i in range(num_steps):
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
             loss.backward()
             optimizer.step()
-            self.losses.append(loss.item())
+            losses.append(loss.item())
             self.lscales.append(self.sgpr.kernel.lengthscale.tolist())
             self.noise_all.append(self.sgpr.noise.item())
             self.amp_all.append(self.sgpr.kernel.variance.item())
             self.indpoints_all.append(self.sgpr.Xu.detach().cpu().numpy())
             if self.verbose and (i % 100 == 0 or i == num_steps - 1):
                 print('iter: {} ...'.format(i),
-                      'loss: {} ...'.format(np.around(self.losses[-1], 4)),
+                      'loss: {} ...'.format(np.around(losses[-1], 4)),
                       'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
