@@ -65,10 +65,10 @@ LENGTH_CONSTR = [
 # Run exploratory analysis
 uncert_idx_all, uncert_val_all, mean_all, sd_all, R_all = [], [], [], [], []
 if not os.path.exists(args.MDIR): os.makedirs(args.MDIR)
+indpts_r = args.INDUCING_POINTS_RATIO
 for i in range(args.ESTEPS):
     print('Exploration step {}/{}'.format(i, args.ESTEPS))
     # Make the number of inducing points dependent on the number of datapoints
-    indpts_r = args.INDUCING_POINTS_RATIO
     indpoints = len(gprutils.prepare_training_data(X, R)[0]) // indpts_r
     # clip to make sure it fits into GPU memory
     indpoints = 1500 if indpoints > 1500 else indpoints
