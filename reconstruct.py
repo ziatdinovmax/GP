@@ -19,6 +19,8 @@ parser.add_argument("--LENGTH_CONSTR_MIN", nargs="?", default=1, type=int)
 parser.add_argument("--LENGTH_CONSTR_MAX", nargs="?", default=20, type=int)
 parser.add_argument("--LEARNING_RATE", nargs="?", default=0.05, type=float)
 parser.add_argument("--INDUCING_POINTS", nargs="?", default=250, type=int)
+parser.add_argument("--NORMALIZE", nargs="?", default=True, type=bool,
+                    help="Normalizes to [0, 1]")
 parser.add_argument("--STEPS", nargs="?", default=1000, type=int)
 parser.add_argument("--NUM_BATCHES", nargs="?", default=200, type=int)
 parser.add_argument("--PROB", nargs="?", default=0.0, type=float,
@@ -32,7 +34,8 @@ args = parser.parse_args()
 
 # Load "ground truth" data (N x M x L spectroscopic grid)
 R_true = np.load(args.FILEPATH)
-R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
+if args.NORMALIZE:
+    R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
 # Get "ground truth" grid indices
 if np.ndim(R_true) == 2:
     e1, e2 = R_true.shape
