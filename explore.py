@@ -29,12 +29,15 @@ parser.add_argument("--LEARNING_RATE", nargs="?", default=0.1, type=float,
 parser.add_argument("--INDUCING_POINTS_RATIO", nargs="?", default=50, type=int,
                     help="ratio of total number of data points" +
                     "to number of inducing points")
+parser.add_argument("--NORMALIZE", nargs="?", default=1, type=int,
+                    help="Normalizes to [0, 1]. 1 is True, 0 is False")
 parser.add_argument("--STEPS", nargs="?", default=1000, type=int,
                     help="Number of SVI steps during model training")
 parser.add_argument("--PROB", nargs="?", default=0.95, type=float,
                     help="Value between 0 and 1." +
                     "Controls number of data points to be removed.")
-parser.add_argument("--USE_GPU", nargs="?", default=True, type=bool)
+parser.add_argument("--USE_GPU", nargs="?", default=1, type=int,
+                    help="1 for using GPU, 0 for running on CPU")
 parser.add_argument("--MDIR", nargs="?", default="Output", type=str,
                     help="Directory to save outputs")
 args = parser.parse_args()
