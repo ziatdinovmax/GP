@@ -17,7 +17,7 @@ To perform GP-guided sample exploration with hyperspectral (3D) measurements bas
 python3 explore.py <path/to/file.npy>
 ```
 
-See also [our notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) with example of applying GP to both hyperspectral data reconstruction and sample exploration.
+See also executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) with example of applying GP to both hyperspectral data reconstruction and sample exploration.
 
 It is strongly recommended to run the codes with a GPU hardware accelerator. The easiest way is to rent a cloud GPU from a [Google Cloud AI Platform](https://cloud.google.com/ai-platform/).
 
