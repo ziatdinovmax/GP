@@ -6,7 +6,7 @@ To perform GP-based reconstruction of sparse 2D image or hyperspectral 3D data r
 python3 reconstruct.py <path/to/file.npy>
 ```
 
-To perform GP-based sample exploration with hyperspectral (3D) measurements based on the reduction of maximal uncertainty run 
+To perform GP-guided sample exploration with hyperspectral (3D) measurements based on the reduction of maximal uncertainty run 
 ```
 python3 explore.py <path/to/file.npy>
 ```
