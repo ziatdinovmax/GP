@@ -1,5 +1,5 @@
 # GP
-Gaussian processes (GP) for microscopic measurements (so far running "synthetic experiments"). To use it, first run
+Gaussian processes (GP) for microscopic data and measurements. To use it, first run
 
 ```
 git clone https://github.com/ziatdinovmax/GP.git
@@ -16,6 +16,7 @@ To perform GP-guided sample exploration with hyperspectral (3D) measurements bas
 ```
 python3 explore.py <path/to/file.npy>
 ```
+Notice that the exploration part currently runs only "synthetic experiments" where you need to provide a full dataset (no missing values) as ground truth.
 
 See also executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) with example of applying GP to both hyperspectral data reconstruction and sample exploration.
 
