@@ -170,7 +170,70 @@ def prepare_test_data(X):
 
 def corrupt_data_xy(X_true, R_true, prob=0.5, replace_w_zeros=False):
     """
-    Replaces certain % of data with NaNs.
+    Replaces certain % of 2D or 3D image data with NaNs;
+    see gprutils.corrupt_image2d and gprutils.corrupt_image3d
+
+    Args:
+        X_true: 3D or 4D ndarray
+            Grid indices for 2D image or 3D hyperspectral data
+        R_true: 2D or 3D ndarray
+            Observations in a form of 2D image or 3D hyperspectral data
+        prob: float between 0. and 1.
+            controls % of data in xy plane to be corrupted
+        replace_w_zeros: bool
+            Corrupts data with zeros instead of NaNs
+
+        Returns:
+            ndarays of grid indices (3D or 4D) and observations (2D or 3D)
+    """
+    if np.ndim(R_true) == 2:
+        X, R = corrupt_image2d(X_true, R_true, prob, replace_w_zeros)
+    elif np.ndim(R_true) == 3:
+        X, R = corrupt_image3d(X_true, R_true, prob, replace_w_zeros)
+    return X, R
+
+
+def corrupt_image2d(X_true, R_true, prob, replace_w_zeros):
+    """
+    Replaces certain % of 2D image data with NaNs.
+
+    Args:
+        X: c x N x M ndarray
+           Grid indices.
+           c is equal to the number of coordinate dimensions.
+           For example, for xy coordinates, c = 2.
+        R_true: N x M ndarray
+            2D image data
+        prob: float between 0. and 1.
+            controls % of data in xy plane to be corrupted
+        replace_w_zeros: bool
+            Corrupts data with zeros instead of NaNs
+
+    Returns:
+        c x M x N ndarray of grid coordinates
+        and M x N ndarray of observatons where
+        certain % of points is replaced with NaNs
+    """
+
+    pyro.set_rng_seed(0)
+    e1, e2 = R_true.shape
+    brn = pyro.distributions.Bernoulli(prob)
+    indices = [i for i in range(e1*e2) if brn.sample() == 1]
+    R = R_true.copy().reshape(e1*e2)
+    R[indices] = np.nan
+    R = R.reshape(e1, e2)
+    X = X_true.copy().reshape(2, e1*e2)
+    X[:, indices] = np.nan
+    X = X.reshape(2, e1, e2)
+    if replace_w_zeros:
+        X = np.nan_to_num(X)
+        R = np.nan_to_num(R)
+    return X, R
+
+
+def corrupt_image3d(X_true, R_true, prob, replace_w_zeros):
+    """
+    Replaces certain % of 3D hyperspectral data with NaNs.
     Applies differently in xy and in z dimensions.
     Specifically, for every corrupted (x, y) point
     we remove all z values associated with this point.
@@ -184,6 +247,8 @@ def corrupt_data_xy(X_true, R_true, prob=0.5, replace_w_zeros=False):
             hyperspectral dataset
         prob: float between 0. and 1.
             controls % of data in xy plane to be corrupted
+        replace_w_zeros: bool
+            Corrupts data with zeros instead of NaNs
 
     Returns:
         c x M x N x L ndarray of grid coordinates
