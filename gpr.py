@@ -177,7 +177,8 @@ class reconstructor:
 
         """
         self.train(learning_rate, steps)
-        return self.predict(num_batches), self.hyperparams
+        mean, sd = self.predict(num_batches)
+        return mean, sd, self.hyperparams
 
     def step(self, learning_rate, steps, dist_edge, num_batches=100):
         """
