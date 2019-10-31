@@ -45,7 +45,8 @@ args = parser.parse_args()
 # Load "ground truth" data (N x M x L spectroscopic grid)
 # (in real experiment we will just get an empty array)
 R_true = np.load(args.FILEPATH)
-R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
+if args.NORMALIZE:
+    R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
 # Get "ground truth" grid indices
 e1, e2, e3 = R_true.shape
 c1, c2, c3 = np.mgrid[:e1:1., :e2:1., :e3:1.]
