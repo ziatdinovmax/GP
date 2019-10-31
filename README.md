@@ -20,6 +20,6 @@ Notice that the exploration part currently runs only "synthetic experiments" whe
 
 See also executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) with example of applying GP to both hyperspectral data reconstruction and sample exploration.
 
-It is strongly recommended to run the codes with a GPU hardware accelerator. The easiest way is to rent a cloud GPU from a [Google Cloud AI Platform](https://cloud.google.com/ai-platform/).
+It is strongly recommended to run the codes with a GPU hardware accelerator. If you don't have a GPU on your local machine, you may rent a cloud GPU from a [Google Cloud AI Platform](https://cloud.google.com/ai-platform/). Running the example notebook one time from top to bottom will cost about 2 USD with a standard deep learning VM instance (One P100 GPU and 15 GB of RAM)
 
 More details TBA
