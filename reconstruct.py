@@ -30,11 +30,6 @@ parser.add_argument("--MDIR", nargs="?", default="Output", type=str,
 
 args = parser.parse_args()
 
-# Construct lengthscale constraints for all 3 dimensions
-LENGTH_CONSTR = [
-                 [float(args.LENGTH_CONSTR_MIN) for i in range(3)],
-                 [float(args.LENGTH_CONSTR_MAX) for i in range(3)]
-]
 # Load "ground truth" data (N x M x L spectroscopic grid)
 R_true = np.load(args.FILEPATH)
 R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
@@ -49,6 +44,11 @@ elif np.ndim(R_true) == 3:
     X_true = np.array([c1, c2, c3])
 else:
     raise NotImplementedError("The input ndarray must be 2D or 3D")
+# Construct lengthscale constraints for all dimensions
+LENGTH_CONSTR = [
+                 [float(args.LENGTH_CONSTR_MIN) for i in range(np.ndim(R_true))],
+                 [float(args.LENGTH_CONSTR_MAX) for i in range(np.ndim(R_true))]
+]
 # Corrupt data (if args.PROB > 0)
 X, R = gprutils.corrupt_data_xy(X_true, R_true, args.PROB)
 # Directory to save results
