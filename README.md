@@ -4,7 +4,7 @@ Gaussian processes (GP) for microscopic data and measurements. To use it, first 
 ```
 git clone https://github.com/ziatdinovmax/GP.git
 cd GP
-pip install -r req.txt
+python3 -m pip install -r req.txt
 ```
 
 To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D data (datacube where measurements (spectroscopic curves) are missing for various xy positions), run:
