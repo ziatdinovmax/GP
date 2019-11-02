@@ -3,11 +3,11 @@
 
 import time
 import numpy as np
+import gprocess.gprutils as gprutils
 import torch
 import pyro
 import pyro.contrib.gp as gp
 import pyro.distributions as dist
-import gprutils
 
 
 class reconstructor:
