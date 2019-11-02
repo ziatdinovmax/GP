@@ -5,8 +5,7 @@
 import argparse
 import os
 import numpy as np
-import gpr
-import gprutils
+from gp import gpr, gprutils
 import torch
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -67,4 +66,5 @@ mean, sd, hyperparams = reconstr.run(
     args.LEARNING_RATE, args.STEPS, args.NUM_BATCHES)
 # Save results
 np.savez(os.path.join(args.MDIR, 'sgpr_reconstruction.npz'),
-         mean=mean, sd=sd, hyperparams=hyperparams)
+         original_data=R_true, input_data=R,
+         mean=mean, SD=sd, hyperparams=hyperparams)
