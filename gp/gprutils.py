@@ -1,6 +1,7 @@
 # Utility functions
 # Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
+import os
 import copy
 import numpy as np
 import torch
@@ -23,7 +24,6 @@ def max_uncertainty(sd, dist_edge):
         list of indices corresponding to the max uncertainty point
     """
     # sum along the last dimension
-    e1, e2 = sd.shape[:2]
     sd = np.sum(sd, axis=-1)
     # mask the edges
     sd = mask_edges(sd, dist_edge)
@@ -367,7 +367,8 @@ def plot_raw_data(raw_data, slice_number, pos,
 
 def plot_reconstructed_data(R, mean, sd, R_true,
                             slice_number, pos,
-                            spec_window=2, **kwargs):
+                            spec_window=2, save_fig=False,
+                            **kwargs):
     """
     R: 3D numpy array
         hyperspectral cube (input data for GP regression)
@@ -389,6 +390,8 @@ def plot_reconstructed_data(R, mean, sd, R_true,
         window to integrate over in frequency dimension (for 2D "slices")
 
     **Kwargs:
+        savedir: str
+            directory to save output figure
         sparsity: float (between 0 and 1)
             indicates % of data points removed (used only for figure title)
         z_vec: 1D ndarray
@@ -398,6 +401,12 @@ def plot_reconstructed_data(R, mean, sd, R_true,
         z_vec_units: str
             spectroscopic measurements units (e.g. Hz, V)
     """
+    if save_fig:
+        mdir = kwargs.get('savedir')
+        if mdir is None:
+            mdir = 'Output'
+        if not os.path.exists(mdir):
+            os.makedirs(mdir)
     sparsity = kwargs.get('sparsity')
     z_vec = kwargs.get('z_vec')
     z_vec_label = kwargs.get('z_vec_label')
@@ -457,6 +466,8 @@ def plot_reconstructed_data(R, mean, sd, R_true,
     for _ax in [ax[2, 0], ax[2, 1]]:
         _ax.set_title('GPR reconstruction')
     plt.subplots_adjust(hspace=.3)
+    if save_fig:
+        fig.savefig(os.path.join(mdir, 'reconstruction_results'))
     plt.show()
 
 
