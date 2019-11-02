@@ -5,7 +5,7 @@
 import argparse
 import os
 import numpy as np
-from gp import gpr, gprutils
+from gprocess import gpr, gprutils
 import torch
 torch.set_default_tensor_type(torch.DoubleTensor)
 
