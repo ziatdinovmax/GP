@@ -450,6 +450,8 @@ def plot_reconstructed_data3d(R, mean, sd, R_true,
             directory to save output figure
         sparsity: float (between 0 and 1)
             indicates % of data points removed (used only for figure title)
+        filename: str
+            name of input file (to create a unique filename for plot)
         z_vec: 1D ndarray
             spectroscopic measurements values (e.g. frequency, bias)
         z_vec_label: str
@@ -463,6 +465,7 @@ def plot_reconstructed_data3d(R, mean, sd, R_true,
             mdir = 'Output'
         if not os.path.exists(mdir):
             os.makedirs(mdir)
+        fname = kwargs.get('filename')
     sparsity = kwargs.get('sparsity')
     z_vec = kwargs.get('z_vec')
     z_vec_label = kwargs.get('z_vec_label')
@@ -523,7 +526,11 @@ def plot_reconstructed_data3d(R, mean, sd, R_true,
         _ax.set_title('GPR reconstruction')
     plt.subplots_adjust(hspace=.3)
     if save_fig:
-        fig.savefig(os.path.join(mdir, 'reconstruction_results'))
+        if fname:
+            fig.savefig(os.path.join(mdir, os.path.basename(
+                os.path.splitext(fname)[0])+'reconstruction'))
+        else:
+            fig.savefig(os.path.join(mdir, 'reconstruction'))
     plt.show()
 
 
@@ -673,8 +680,8 @@ def plot_inducing_points(hyperparams, **kwargs):
         plot_to = len(learned_inducing_points)
     if indp_nth is None:
         indp_nth = 1
-    fig = plt.figure(figsize = (22, 9))
-    ax = fig.add_subplot(121, projection = '3d')
+    fig = plt.figure(figsize=(22, 9))
+    ax = fig.add_subplot(121, projection='3d')
     ax.view_init(20, 30)
     ax.set_xlabel('x coordinate (px)', fontsize=14)
     ax.set_ylabel('y coordinate (px)', fontsize=14)
