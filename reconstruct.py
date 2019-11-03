@@ -55,8 +55,8 @@ LENGTH_CONSTR = [
 # Corrupt data (if args.PROB > 0)
 X, R = gprutils.corrupt_data_xy(X_true, R_true, args.PROB)
 # Directory to save results
-if not os.path.exists(args.MDIR):
-    os.makedirs(args.MDIR)
+if not os.path.exists(args.SAVEDIR):
+    os.makedirs(args.SAVEDIR)
 # Reconstruct the corrupt data. Initalize our "reconstructor" first.
 reconstr = gpr.reconstructor(
     X, R, X_true, args.KERNEL, LENGTH_CONSTR, args.INDUCING_POINTS,
