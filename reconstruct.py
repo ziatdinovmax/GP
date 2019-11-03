@@ -1,4 +1,4 @@
-# GP-based reconstruction of 3D spectroscopic data
+# GP-based reconstruction of 2D images and 3D spectroscopic data
 # Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 # imports
@@ -27,7 +27,7 @@ parser.add_argument("--PROB", nargs="?", default=0.0, type=float,
                     "Controls number of data points to be removed.")
 parser.add_argument("--USE_GPU", nargs="?", default=1, type=int,
                     help="1 for using GPU, 0 for running on CPU")
-parser.add_argument("--MDIR", nargs="?", default="Output", type=str,
+parser.add_argument("--SAVEDIR", nargs="?", default="Output", type=str,
                     help="directory to save outputs")
 
 args = parser.parse_args()
@@ -65,6 +65,7 @@ reconstr = gpr.reconstructor(
 mean, sd, hyperparams = reconstr.run(
     args.LEARNING_RATE, args.STEPS, args.NUM_BATCHES)
 # Save results
-np.savez(os.path.join(args.MDIR, 'sgpr_reconstruction.npz'),
-         original_data=R_true, input_data=R,
-         mean=mean, SD=sd, hyperparams=hyperparams)
+np.savez(os.path.join(args.SAVEDIR, os.path.basename(
+    os.path.splitext(args.FILEPATH)[0])+'gpr_reconstruction.npz'),
+    original_data=R_true, input_data=R, mean=mean, SD=sd,
+    hyperparams=hyperparams)
