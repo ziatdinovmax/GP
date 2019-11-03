@@ -1,4 +1,8 @@
-# GP sample exploration based on maximal uncrtainty reducton
+# GP sample exploration based on maximal uncertainty reducton
+# for 3D hyperspectral measurements.
+# Currently runs only "synthetic experiments" where
+# one needs to provide a full dataset (no missing values) as ground truth.
+
 # Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 # imports
