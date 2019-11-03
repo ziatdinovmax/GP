@@ -20,7 +20,7 @@ sd = dataset["SD"]
 
 if np.ndim(R) == 2:
     gprutils.plot_reconstructed_data2d(
-        R, R, mean, savefig=True,
+        R, mean, save_fig=True,
         savedir=args.SAVEDIR, filepath=args.FILEPATH)
 if np.ndim(R) == 3:
     slice_number = int(input(
