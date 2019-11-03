@@ -67,7 +67,7 @@ LENGTH_CONSTR = [
 ]
 # Run exploratory analysis
 uncert_idx_all, uncert_val_all, mean_all, sd_all, R_all = [], [], [], [], []
-if not os.path.exists(args.MDIR): os.makedirs(args.MDIR)
+if not os.path.exists(args.SAVEDIR): os.makedirs(args.SAVEDIR)
 indpts_r = args.INDUCING_POINTS_RATIO
 for i in range(args.ESTEPS):
     print('Exploration step {}/{}'.format(i, args.ESTEPS))
