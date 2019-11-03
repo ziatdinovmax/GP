@@ -41,7 +41,7 @@ parser.add_argument("--PROB", nargs="?", default=0.95, type=float,
                     "Controls number of data points to be removed.")
 parser.add_argument("--USE_GPU", nargs="?", default=1, type=int,
                     help="1 for using GPU, 0 for running on CPU")
-parser.add_argument("--MDIR", nargs="?", default="Output", type=str,
+parser.add_argument("--SAVEDIR", nargs="?", default="Output", type=str,
                     help="Directory to save outputs")
 args = parser.parse_args()
 
