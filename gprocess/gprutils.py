@@ -384,7 +384,7 @@ def plot_reconstructed_data2d(R, mean, R_true,
     **Kwargs:
         savedir: str
             directory to save output figure
-        filename: str
+        filepath: str
             name of input file (to create a unique filename for plot)
         sparsity: float (between 0 and 1)
             indicates % of data points removed (used only for figure title)
@@ -396,7 +396,7 @@ def plot_reconstructed_data2d(R, mean, R_true,
             mdir = 'Output'
         if not os.path.exists(mdir):
             os.makedirs(mdir)
-        fname = kwargs.get('filename')
+        fpath = kwargs.get('filepath')
     sparsity = kwargs.get('sparsity')
     e1, e2 = R_true.shape
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
@@ -412,9 +412,9 @@ def plot_reconstructed_data2d(R, mean, R_true,
     ax2.set_title('GP reconstruction')
     ax3.set_title('Original/ground-truth data')
     if save_fig:
-        if fname:
+        if fpath:
             fig.savefig(os.path.join(mdir, os.path.basename(
-                os.path.splitext(fname)[0])+'reconstruction'))
+                os.path.splitext(fpath)[0])+'reconstruction'))
         else:
             fig.savefig(os.path.join(mdir, 'reconstruction'))
     plt.show()
@@ -450,8 +450,8 @@ def plot_reconstructed_data3d(R, mean, sd, R_true,
             directory to save output figure
         sparsity: float (between 0 and 1)
             indicates % of data points removed (used only for figure title)
-        filename: str
-            name of input file (to create a unique filename for plot)
+        filepath: str
+            path/name of input file (to create a unique filename for plot)
         z_vec: 1D ndarray
             spectroscopic measurements values (e.g. frequency, bias)
         z_vec_label: str
@@ -465,7 +465,7 @@ def plot_reconstructed_data3d(R, mean, sd, R_true,
             mdir = 'Output'
         if not os.path.exists(mdir):
             os.makedirs(mdir)
-        fname = kwargs.get('filename')
+        fpath = kwargs.get('filepath')
     sparsity = kwargs.get('sparsity')
     z_vec = kwargs.get('z_vec')
     z_vec_label = kwargs.get('z_vec_label')
@@ -526,9 +526,9 @@ def plot_reconstructed_data3d(R, mean, sd, R_true,
         _ax.set_title('GPR reconstruction')
     plt.subplots_adjust(hspace=.3)
     if save_fig:
-        if fname:
+        if fpath:
             fig.savefig(os.path.join(mdir, os.path.basename(
-                os.path.splitext(fname)[0])+'reconstruction'))
+                os.path.splitext(fpath)[0])+'reconstruction'))
         else:
             fig.savefig(os.path.join(mdir, 'reconstruction'))
     plt.show()
