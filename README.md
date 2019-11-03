@@ -20,6 +20,6 @@ Notice that the exploration part currently runs only "synthetic experiments" whe
 
 See also our executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) with examples of applying GP to both hyperspectral data reconstruction and sample exploration.
 
-It is strongly recommended to run the codes with a GPU hardware accelerator. If you don't have a GPU on your local machine, you may rent a cloud GPU from [Google Cloud AI Platform](https://cloud.google.com/ai-platform/). Running the [example notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) one time from top to bottom will cost about 2 USD with a standard deep learning VM instance (one P100 GPU and 15 GB of RAM).
+It is strongly recommended to run the codes with a GPU hardware accelerator. If you don't have a GPU on your local machine, you may rent a cloud GPU from [Google Cloud AI Platform](https://cloud.google.com/ai-platform/). Running the [example notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) one time from top to bottom will cost about 1USD with a standard deep learning VM instance (one P100 GPU and 15 GB of RAM).
 
 More details TBA
