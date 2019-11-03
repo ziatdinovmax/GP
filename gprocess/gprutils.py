@@ -397,7 +397,7 @@ def plot_reconstructed_data2d(R, mean, save_fig=False, **kwargs):
     e1, e2 = R.shape
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
     ax1.imshow(R, cmap='nipy_spectral')
-    ax2.imshwow(mean.reshape(e1, e2), cmap='nipy_spectral')
+    ax2.imshow(mean.reshape(e1, e2), cmap='nipy_spectral')
     ax1.set_title('Input/corrupted data')
     if sparsity:
         ax2.set_title(
