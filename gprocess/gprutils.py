@@ -365,29 +365,85 @@ def plot_raw_data(raw_data, slice_number, pos,
     plt.show()
 
 
-def plot_reconstructed_data(R, mean, sd, R_true,
-                            slice_number, pos,
-                            spec_window=2, save_fig=False,
-                            **kwargs):
+def plot_reconstructed_data2d(R, mean, R_true,
+                              save_fig=False, **kwargs):
     """
-    R: 3D numpy array
-        hyperspectral cube (input data for GP regression)
-    mean: 1D numpy array
-        predictive mean
-        (flattened; actual dimensions are the same as for R and R_true)
-    sd: 1D numpy array
-        standard deviation
-        (flattened; actual dimensions are the same as for R and R_true)
-    R_true: 3D numpy array
-        hyperspectral cube, normalized to (0, 1)
-        (original data; if no observations weere removed, R_true == R)
-    slice_number: int
-        slice from datacube to visualize
-    pos: list of lists
-        list with [x, y] coordinates of points where
-        single spectroscopic curves will be extracted and visualized
-    spec_window: int
-        window to integrate over in frequency dimension (for 2D "slices")
+    Args:
+        R: 2D numpy array
+            Input image for GP regression
+        mean: 1D numpy array
+            predictive mean
+            (cab be flattened; actual dimensions are the same as for R and R_true)
+        sd: 1D numpy array
+            standard deviation
+            (can be flattened; actual dimensions are the same as for R and R_true)
+        R_true: 3D numpy array
+            hyperspectral cube, normalized to (0, 1)
+            (original data; if no observations were removed, R_true == R)
+
+    **Kwargs:
+        savedir: str
+            directory to save output figure
+        filename: str
+            name of input file (to create a unique filename for plot)
+        sparsity: float (between 0 and 1)
+            indicates % of data points removed (used only for figure title)
+    """
+
+    if save_fig:
+        mdir = kwargs.get('savedir')
+        if mdir is None:
+            mdir = 'Output'
+        if not os.path.exists(mdir):
+            os.makedirs(mdir)
+        fname = kwargs.get('filename')
+    sparsity = kwargs.get('sparsity')
+    e1, e2 = R_true.shape
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+    ax1.imshow(R, cmap='nipy_spectral')
+    ax2.imshwow(mean.reshape(e1, e2), cmap='nipy_spectral')
+    ax3.imshow(R_true, cmap='nipy_spectral')
+    ax1.set_title('Input/corrupted data')
+    if sparsity:
+        ax2.set_title(
+            'Corrupted input data\n{}% of observations removed'.format(sparsity*100))
+    else:
+        ax2.set_title('Input/corrupted data')
+    ax2.set_title('GP reconstruction')
+    ax3.set_title('Original/ground-truth data')
+    if save_fig:
+        if fname:
+            fig.savefig(os.path.join(mdir, os.path.basename(
+                os.path.splitext(fname)[0])+'reconstruction'))
+        else:
+            fig.savefig(os.path.join(mdir, 'reconstruction'))
+    plt.show()
+
+
+def plot_reconstructed_data3d(R, mean, sd, R_true,
+                              slice_number, pos,
+                              spec_window=2, save_fig=False,
+                              **kwargs):
+    """
+    Args
+        R: 3D numpy array
+            hyperspectral cube (input data for GP regression)
+        mean: 1D numpy array
+            predictive mean
+            (flattened; actual dimensions are the same as for R and R_true)
+        sd: 1D numpy array
+            standard deviation
+            (flattened; actual dimensions are the same as for R and R_true)
+        R_true: 3D numpy array
+            hyperspectral cube, normalized to (0, 1)
+            (original data; if no observations were removed, R_true == R)
+        slice_number: int
+            slice from datacube to visualize
+        pos: list of lists
+            list with [x, y] coordinates of points where
+            single spectroscopic curves will be extracted and visualized
+        spec_window: int
+            window to integrate over in frequency dimension (for 2D "slices")
 
     **Kwargs:
         savedir: str
@@ -444,9 +500,9 @@ def plot_reconstructed_data(R, mean, sd, R_true,
     for _ax in [ax[1, 0], ax[1, 1]]:
         if sparsity:
             _ax.set_title(
-                'Corrupted data\n{}% of observations removed'.format(sparsity*100))
+                'Corrupted input data\n{}% of observations removed'.format(sparsity*100))
         else:
-            _ax.set_title('Corrupted data')
+            _ax.set_title('Input/corrupted data')
     ax[2, 0].imshow(
         np.sum(Rtest[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
     for p, col in zip(pos, my_colors):
@@ -643,3 +699,13 @@ def plot_inducing_points(hyperparams, **kwargs):
     clrbar_ = plt.colorbar(img, ax=ax2, orientation='vertical')
     clrbar_.set_label('SVI iterations', fontsize=14, labelpad=10)
     plt.show()
+
+
+def plot_reconstructed_data(R, mean, sd, R_true,
+                            slice_number, pos,
+                            spec_window=2, save_fig=False,
+                            **kwargs):
+
+    return plot_reconstructed_data3d(
+        R, mean, sd, R_true, slice_number, pos,
+        spec_window=2, save_fig=False, **kwargs)
