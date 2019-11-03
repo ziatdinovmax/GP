@@ -408,7 +408,7 @@ def plot_reconstructed_data2d(R, mean, save_fig=False, **kwargs):
     if save_fig:
         if fpath:
             fig.savefig(os.path.join(mdir, os.path.basename(
-                os.path.splitext(fpath)[0])+'reconstruction'))
+                os.path.splitext(fpath)[0])))
         else:
             fig.savefig(os.path.join(mdir, 'reconstruction'))
     plt.show()
