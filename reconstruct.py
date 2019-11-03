@@ -66,6 +66,6 @@ mean, sd, hyperparams = reconstr.run(
     args.LEARNING_RATE, args.STEPS, args.NUM_BATCHES)
 # Save results
 np.savez(os.path.join(args.SAVEDIR, os.path.basename(
-    os.path.splitext(args.FILEPATH)[0])+'gpr_reconstruction.npz'),
+    os.path.splitext(args.FILEPATH)[0])+'-gpr_reconstruction.npz'),
     original_data=R_true, input_data=R, mean=mean, SD=sd,
     hyperparams=hyperparams)

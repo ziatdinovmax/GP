@@ -92,6 +92,6 @@ for i in range(args.ESTEPS):
     R, X = gprutils.do_measurement(R_true, X_true, R, X, uncert_idx, args.MSIZE)
     # (over)write results on disk
     np.savez(os.path.join(args.SAVEDIR, os.path.basename(
-             os.path.splitext(args.FILEPATH)[0])+'explorative_analysis.npz'),
+             os.path.splitext(args.FILEPATH)[0])+'-explorative_analysis.npz'),
              R_all=R_all, mean_all=mean_all,
              sd_all=sd_all, uncert_idx_all=uncert_idx_all)
