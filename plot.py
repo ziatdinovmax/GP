@@ -20,7 +20,7 @@ sd = dataset["SD"]
 
 if np.ndim(R) == 2:
     gprutils.plot_reconstructed_data2d(
-        R, R, mean, R_true, savefig=True,
+        R, R, mean, savefig=True,
         savedir=args.SAVEDIR, filepath=args.FILEPATH)
 if np.ndim(R) == 3:
     slice_number = int(input(
@@ -32,6 +32,6 @@ if np.ndim(R) == 3:
     assert len(pos_x) == len(pos_y), "Enter the positions as x1 y1 x2 y2 ..."
     pos_xy = [[pos_x[i], pos_y[i]] for i in range(len(pos_x))]
     gprutils.plot_reconstructed_data3d(
-        R, mean, sd, R_true, slice_number, pos_xy,
+        R, mean, sd, slice_number, pos_xy,
         spec_window=2, save_fig=True,
         savedir=args.SAVEDIR, filepath=args.FILEPATH)
