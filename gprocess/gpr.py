@@ -12,8 +12,7 @@ import pyro.distributions as dist
 
 class reconstructor:
     """
-   Sparse GP regression model for 2D/3D images reconstruction
-   and uncertainty exploration
+    Class for uncertainty exploration in datacubes with GP regression
 
     Args:
         X:  c x  N x M x L or c x N x M ndarray
@@ -29,9 +28,16 @@ class reconstructor:
             for kernel lengthscale(s) (default is from 0.1 to 20);
         indpoints: int
             number of inducing points for SparseGPRegression
-        ldim: int
-            number of input dimensions
-            (equal to number of feature vector columns)
+        input_dim: int
+            number of lengthscale dimensions (1 or 3)
+        learning_rate: float
+            learning rate
+        iterations: int
+            number of SVI training iteratons
+        num_batches: int
+            number of batches for splitting the Xtest array
+            (for large datasets, you may not have enough GPU memory
+            to process the entire dataset at once)
         use_gpu: bool
             Uses GPU hardware accelerator when set to 'True'
         verbose: bool
@@ -49,30 +55,38 @@ class reconstructor:
             Combines a single model training and prediction
             to find point with max uncertainty in the data
     """
-    def __init__(self, X, y, Xtest, kernel, lengthscale,
-                 indpoints=1000, ldim=3, use_gpu=False, verbose=False):
+    def __init__(self, X, y, Xtest,
+                 kernel, lengthscale,
+                 indpoints=1000, input_dim=3,
+                 learning_rate=5e-2, iterations=1000,
+                 num_batches=10,
+                 use_gpu=False, verbose=False):
         if use_gpu and torch.cuda.is_available():
+            torch.cuda.empty_cache()
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
             use_gpu = True
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
             use_gpu = False
-        X, y = gprutils.prepare_training_data(X, y)
-        if indpoints > len(X):
-            indpoints = len(X)
-        Xu = X[::len(X) // indpoints]
-        kernel = get_kernel(kernel, ldim, use_gpu, lengthscale=lengthscale)
+        self.X, self.y = gprutils.prepare_training_data(X, y)
+        if indpoints > len(self.X):
+            indpoints = len(self.X)
+        Xu = self.X[::len(self.X) // indpoints]
+        kernel = get_kernel(kernel, input_dim, use_gpu, lengthscale=lengthscale)
         self.fulldims = Xtest.shape[1:]
         self.Xtest = gprutils.prepare_test_data(Xtest)
         if use_gpu:
-            X = X.cuda()
-            y = y.cuda()
+            self.X = self.X.cuda()
+            self.y = self.y.cuda()
             self.Xtest = self.Xtest.cuda()
         self.sgpr = gp.models.SparseGPRegression(
-            X, y, kernel, Xu, jitter=1.0e-5)
+            self.X, self.y, kernel, Xu, jitter=1.0e-5)
         print("# of inducing points for GP regression: {}".format(len(Xu)))
         if use_gpu:
             self.sgpr.cuda()
+        self.num_batches = num_batches
+        self.learning_rate = learning_rate
+        self.iterations = iterations
         self.hyperparams = {}
         self.indpoints_all = []
         self.lscales, self.noise_all, self.amp_all = [], [], []
@@ -84,36 +98,38 @@ class reconstructor:
         }
         self.verbose = verbose
 
-    def train(self, learning_rate=5e-2, steps=1000):
+    def train(self, **kwargs):
         """
         Training sparse GP regression model
-        Args:
+        **Kwargs:
             learning_rate: float
                 learning rate
-            steps: int
+            iterations: int
                 number of SVI training iteratons
         """
+        if kwargs.get("learning_rate") is not None:
+            self.learning_rate = kwargs.get("learning_rate")
+        if kwargs.get("iterations") is not None:
+            self.iterations = kwargs.get("iterations")
         pyro.set_rng_seed(0)
         pyro.clear_param_store()
-        optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
-        num_steps = steps
+        num_steps = self.iterations
         start_time = time.time()
         print('Model training...')
-        losses = []
-        for i in range(num_steps):
+        for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
             loss.backward()
             optimizer.step()
-            losses.append(loss.item())
             self.lscales.append(self.sgpr.kernel.lengthscale.tolist())
             self.noise_all.append(self.sgpr.noise.item())
             self.amp_all.append(self.sgpr.kernel.variance.item())
             self.indpoints_all.append(self.sgpr.Xu.detach().cpu().numpy())
-            if self.verbose and (i % 100 == 0 or i == num_steps - 1):
+            if self.verbose and (i % 100 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
-                      'loss: {} ...'.format(np.around(losses[-1], 4)),
+                      'loss: {} ...'.format(np.around(loss.item(), 4)),
                       'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
@@ -129,10 +145,10 @@ class reconstructor:
                 np.around(self.sgpr.noise.item(), 7)))
         return
 
-    def predict(self, num_batches=10):
+    def predict(self, **kwargs):
         """
         Use trained GPRegression model to make predictions
-        Args:
+        **Kwargs:
             num_batches: int
                 number of batches for splitting the Xtest array
                 (for large datasets, you may not have enough GPU memory
@@ -140,13 +156,15 @@ class reconstructor:
         Returns:
             predictive mean and variance
         """
+        if kwargs.get("num_batches") is not None:
+            self.num_batches = kwargs.get("num_batches")
         print("Calculating predictive mean and variance...", end=" ")
         # Prepare for inference
-        batch_range = len(self.Xtest) // num_batches
+        batch_range = len(self.Xtest) // self.num_batches
         mean = np.zeros((self.Xtest.shape[0]))
         sd = np.zeros((self.Xtest.shape[0]))
         # Run inference batch-by-batch
-        for i in range(num_batches):
+        for i in range(self.num_batches):
             Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
             with torch.no_grad():
                 mean_i, cov = self.sgpr(Xtest_i, full_cov=True, noiseless=False)
@@ -154,13 +172,19 @@ class reconstructor:
             mean[i*batch_range:(i+1)*batch_range] = mean_i.cpu().numpy()
             sd[i*batch_range:(i+1)*batch_range] = sd_i.cpu().numpy()
         print("Done")
+        if next(self.sgpr.parameters()).is_cuda:
+            self.sgpr.cpu()
+            torch.set_default_tensor_type(torch.DoubleTensor)
+            self.X, self.y = self.X.cpu(), self.y.cpu()
+            self.Xtest = self.Xtest.cpu()
+            torch.cuda.empty_cache()
         return mean, sd
 
-    def run(self, learning_rate=5e-2, steps=1000, num_batches=10):
+    def run(self, **kwargs):
         """
         Train the initialized model and calculate predictive mean and variance
 
-        Args:
+        **Kwargs:
             learning_rate: float
                 learning rate for GPR model training
             steps: int
@@ -173,22 +197,30 @@ class reconstructor:
             dictionary with hyperparameters as a function of SVI steps
 
         """
-        self.train(learning_rate, steps)
-        mean, sd = self.predict(num_batches)
+        if kwargs.get("learning_rate") is not None:
+            self.learning_rate = kwargs.get("learning_rate")
+        if kwargs.get("iterations") is not None:
+            self.iterations = kwargs.get("iterations")
+        if kwargs.get("num_batches") is not None:
+            self.num_batches = kwargs.get("num_batches")
+        self.train(learning_rate=self.learning_rate, iterations=self.iterations)
+        mean, sd = self.predict(num_batches=self.num_batches)
         return mean, sd, self.hyperparams
 
-    def step(self, learning_rate, steps, dist_edge, num_batches=100):
+    def step(self, dist_edge, **kwargs):
         """
         Performs single train-predict step for exploration analysis
         returning new point with maximum uncertainty
 
         Args:
+            dist_edge: list with two integers
+                edge regions not considered for max uncertainty evaluation
+
+        **Kwargs:
             learning_rate: float
                 learning rate for GPR model training
             steps: int
                 number of SVI training iteratons
-            dist_edge: list with two integers
-                edge regions not considered for max uncertainty evaluation
             num_batches: int
                 number of batches for splitting the Xtest array
 
@@ -196,10 +228,16 @@ class reconstructor:
             list indices of point with maximum uncertainty
 
         """
+        if kwargs.get("learning_rate") is not None:
+            self.learning_rate = kwargs.get("learning_rate")
+        if kwargs.get("iterations") is not None:
+            self.iterations = kwargs.get("iterations")
+        if kwargs.get("num_batches") is not None:
+            self.num_batches = kwargs.get("num_batches")
         # train a model
-        self.train(learning_rate, steps)
+        self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         # make prediction
-        mean, sd = self.predict(num_batches)
+        mean, sd = self.predict(num_batches=self.num_batches)
         # find point with maximum uncertainty
         sd_ = sd.reshape(self.fulldims[0], self.fulldims[1], self.fulldims[2])
         amax, uncert_list = gprutils.max_uncertainty(sd_, dist_edge)
