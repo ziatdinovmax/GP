@@ -172,12 +172,6 @@ class reconstructor:
             mean[i*batch_range:(i+1)*batch_range] = mean_i.cpu().numpy()
             sd[i*batch_range:(i+1)*batch_range] = sd_i.cpu().numpy()
         print("Done")
-        if next(self.sgpr.parameters()).is_cuda:
-            self.sgpr.cpu()
-            torch.set_default_tensor_type(torch.DoubleTensor)
-            self.X, self.y = self.X.cpu(), self.y.cpu()
-            self.Xtest = self.Xtest.cpu()
-            torch.cuda.empty_cache()
         return mean, sd
 
     def run(self, **kwargs):
@@ -205,6 +199,12 @@ class reconstructor:
             self.num_batches = kwargs.get("num_batches")
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         mean, sd = self.predict(num_batches=self.num_batches)
+        if next(self.sgpr.parameters()).is_cuda:
+            self.sgpr.cpu()
+            torch.set_default_tensor_type(torch.DoubleTensor)
+            self.X, self.y = self.X.cpu(), self.y.cpu()
+            self.Xtest = self.Xtest.cpu()
+            torch.cuda.empty_cache()
         return mean, sd, self.hyperparams
 
     def step(self, dist_edge, **kwargs):
