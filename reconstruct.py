@@ -60,10 +60,10 @@ if not os.path.exists(args.SAVEDIR):
 # Reconstruct the corrupt data. Initalize our "reconstructor" first.
 reconstr = gpr.reconstructor(
     X, R, X_true, args.KERNEL, LENGTH_CONSTR, args.INDUCING_POINTS,
-    ldim=np.ndim(R_true), use_gpu=args.USE_GPU, verbose=True)
+    np.ndim(R_true), args.LEARNING_RATE, args.STEPS, args.NUM_BATCHES,
+    args.USE_GPU, verbose=True)
 # Model training and prediction
-mean, sd, hyperparams = reconstr.run(
-    args.LEARNING_RATE, args.STEPS, args.NUM_BATCHES)
+mean, sd, hyperparams = reconstr.run()
 # Save results
 np.savez(os.path.join(args.SAVEDIR, os.path.basename(
     os.path.splitext(args.FILEPATH)[0])+'-gpr_reconstruction.npz'),
