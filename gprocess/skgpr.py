@@ -120,6 +120,10 @@ class skreconstructor:
 
     def predict(self, **kwargs):
         "Makes a prediction with trained GP regression model"
+        if kwargs.get("Xtest") is not None:
+            self.Xtest = gprutils.prepare_test_data(kwargs.get("Xtest"))
+            if next(self.model.parameters()).is_cuda:
+                self.Xtest = self.Xtest.cuda()
         if kwargs.get("num_batches") is not None:
             self.num_batches = kwargs.get("num_batches")
         if kwargs.get("max_root") is not None:
@@ -143,19 +147,20 @@ class skreconstructor:
             if self.calculate_sd:
                 sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.cpu().numpy()
         print("\nDone")
-        if next(self.model.parameters()).is_cuda:
-            self.model.cpu()
-            torch.set_default_tensor_type(torch.DoubleTensor)
-            self.X, self.y = self.X.cpu(), self.y.cpu()
-            self.Xtest = self.Xtest.cpu()
-            torch.cuda.empty_cache()
         if self.calculate_sd:
             return (mean, sd)
         return mean
 
     def run(self):
         self.train()
-        return self.predict()
+        prediction = self.predict()
+        if next(self.model.parameters()).is_cuda:
+            self.model.cpu()
+            torch.set_default_tensor_type(torch.DoubleTensor)
+            self.X, self.y = self.X.cpu(), self.y.cpu()
+            self.Xtest = self.Xtest.cpu()
+            torch.cuda.empty_cache()
+        return prediction
 
 
 class skgprmodel(gpytorch.models.ExactGP):
