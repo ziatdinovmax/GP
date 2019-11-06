@@ -78,10 +78,10 @@ for i in range(args.ESTEPS):
     # Initialize explorer
     bexplorer = gpr.reconstructor(
         X, R, X_true, args.KERNEL, LENGTH_CONSTR,
-        indpoints, use_gpu=args.USE_GPU)
+        indpoints, 3, args.LEARNING_RATE, args.STEPS,
+        use_gpu=args.USE_GPU)
     # get indices/value of a max uncertainty point
-    uncert_idx, uncert_val, mean, sd = bexplorer.step(
-        args.LEARNING_RATE, args.STEPS, dist_edge)
+    uncert_idx, uncert_val, mean, sd = bexplorer.step(dist_edge)
     # some safeguards (to not stuck at one point)
     uncert_idx, uncert_val = gprutils.checkvalues(
         uncert_idx, uncert_idx_all, uncert_val)
