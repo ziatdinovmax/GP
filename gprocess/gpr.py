@@ -12,14 +12,15 @@ import pyro.distributions as dist
 
 class reconstructor:
     """
-    Class for uncertainty exploration in datacubes with GP regression
+   Sparse GP regression model for 2D/3D images reconstruction
+   and uncertainty exploration
 
     Args:
-        X:  c x  N x M x L ndarray
+        X:  c x  N x M x L or c x N x M ndarray
             Grid indices.
             c is equal to the number of coordinate dimensions.
             For example, for xyz coordinates, c = 3.
-        y: N x M x L ndarray
+        y: N x M x L or N x M ndarray
             Observations (data points)
         kernel: str
             kernel type
