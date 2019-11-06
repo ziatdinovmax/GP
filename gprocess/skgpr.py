@@ -160,7 +160,7 @@ class skreconstructor:
             self.X, self.y = self.X.cpu(), self.y.cpu()
             self.Xtest = self.Xtest.cpu()
             torch.cuda.empty_cache()
-        return prediction
+        return prediction, self.hyperparams
 
 
 class skgprmodel(gpytorch.models.ExactGP):
