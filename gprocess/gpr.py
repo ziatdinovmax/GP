@@ -30,7 +30,8 @@ class reconstructor:
         indpoints: int
             number of inducing points for SparseGPRegression
         ldim: int
-            number of lengthscale dimensions (1 or 3)
+            number of input dimensions
+            (equal to number of feature vector columns)
         use_gpu: bool
             Uses GPU hardware accelerator when set to 'True'
         verbose: bool
@@ -86,7 +87,6 @@ class reconstructor:
     def train(self, learning_rate=5e-2, steps=1000):
         """
         Training sparse GP regression model
-
         Args:
             learning_rate: float
                 learning rate
@@ -132,15 +132,11 @@ class reconstructor:
     def predict(self, num_batches=10):
         """
         Use trained GPRegression model to make predictions
-
         Args:
-            model: GPRegression object
-                Trained GP regression model
             num_batches: int
                 number of batches for splitting the Xtest array
                 (for large datasets, you may not have enough GPU memory
                 to process the entire dataset at once)
-
         Returns:
             predictive mean and variance
         """
