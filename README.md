@@ -1,5 +1,5 @@
 # GP
-Gaussian processes (GP) for microscopic data and measurements. To use it, first run:
+Gaussian processes (GP) for microscopic data and measurements using Pyro probabilistic programming 'language'. To use it, first run:
 
 ```
 git clone https://github.com/ziatdinovmax/GP.git
