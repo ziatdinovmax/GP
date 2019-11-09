@@ -168,7 +168,7 @@ def prepare_test_data(X):
     return X
 
 
-def get_indices(R, dense_x=1.):
+def get_grid_indices(R, dense_x=1.):
     """
     Creates grid indices for 2D and 3D numpy arrays
 
