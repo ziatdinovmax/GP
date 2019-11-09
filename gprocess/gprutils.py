@@ -168,6 +168,34 @@ def prepare_test_data(X):
     return X
 
 
+def get_indices(R, dense_x=1.):
+    """
+    Creates grid indices for 2D and 3D numpy arrays
+
+    Args:
+        R: 2D or 3D ndarray
+            Grid measurements
+        dense_x: float
+            Determines density of grid
+            (can be increased at prediction stage)
+    
+    Returns:
+        X_grid: 3D or 4D ndarray
+            grid indices
+    """
+    if np.ndim(R) == 2:
+        e1, e2 = R.shape
+        c1, c2 = np.mgrid[:e1:dense_x, :e2:dense_x]
+        X_grid = np.array([c1, c2])
+    elif np.ndim(R) == 3:
+        e1, e2, e3 = R.shape
+        c1, c2, c3 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x]
+        X_grid = np.array([c1, c2, c3])
+    else:
+        raise NotImplementedError("Currently works only for 2D and 3D numpy arrays")
+    return X_grid
+
+
 def corrupt_data_xy(X_true, R_true, prob=0.5, replace_w_zeros=False):
     """
     Replaces certain % of 2D or 3D image data with NaNs;
