@@ -282,6 +282,27 @@ def corrupt_image3d(X_true, R_true, prob, replace_w_zeros):
         R = np.nan_to_num(R)
     return X, R
 
+def open_edge_points(R, R_true, s=6):
+    """
+    Opens measured curves at the edges of FOV
+
+    Args:
+        R: N x M x L ndarray
+            empty/sparse hyperspectral datacube
+        R_true: N x M x L ndarray
+            hyperspectral datacube with "ground truth"
+        s: int
+            step (determines density of opened edge points)
+        
+    Returns:
+        N x M x L ndarray with opened edge points
+    """
+    R[0, ::s, :] = R_true[0, ::s, :]
+    R[::s, 0, :] = R_true[::s, 0, :]
+    R[e1-1, s:e2-s:s, :] = R_true[e1-1, s:e2-s:s, :]
+    R[s::s, e2-1, :] = R_true[s::s, e2-1, :]
+    return R
+
 
 def plot_kernel_hyperparams(hyperparams):
     """
