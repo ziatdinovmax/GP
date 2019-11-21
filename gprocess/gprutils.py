@@ -325,6 +325,7 @@ def open_edge_points(R, R_true, s=6):
     Returns:
         N x M x L ndarray with opened edge points
     """
+    e1, e2, _ = R_true.shape
     R[0, ::s, :] = R_true[0, ::s, :]
     R[::s, 0, :] = R_true[::s, 0, :]
     R[e1-1, s:e2-s:s, :] = R_true[e1-1, s:e2-s:s, :]
