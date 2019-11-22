@@ -26,7 +26,7 @@ class reconstructor:
             kernel type
         lengthscale: list of two lists
             determines lower (1st list) and upper (2nd list) bounds
-            for kernel lengthscale(s) (default is from 0.1 to 20);
+            for kernel lengthscale(s)
         indpoints: int
             number of inducing points for SparseGPRegression
         input_dim: int
@@ -43,6 +43,9 @@ class reconstructor:
             Uses GPU hardware accelerator when set to 'True'
         verbose: bool
             prints statistics after each 100th training iteration
+        
+    **Kwargs:
+        amplitude: kernel variance or amplitude squared
 
     Methods:
         train:
@@ -57,11 +60,11 @@ class reconstructor:
             to find point with max uncertainty in the data
     """
     def __init__(self, X, y, Xtest,
-                 kernel, lengthscale,
+                 kernel, lengthscale=None,
                  indpoints=1000, input_dim=3,
                  learning_rate=5e-2, iterations=1000,
-                 num_batches=10,
-                 use_gpu=False, verbose=False):
+                 num_batches=10, use_gpu=False, 
+                 verbose=False, **kwargs):
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
@@ -73,7 +76,12 @@ class reconstructor:
         if indpoints > len(self.X):
             indpoints = len(self.X)
         Xu = self.X[::len(self.X) // indpoints]
-        kernel = get_kernel(kernel, input_dim, use_gpu, lengthscale=lengthscale)
+        if lengthscale is None:
+            lengthscale = [[0. for l in range(input_dim)], 
+                           [np.mean(y.shape) / 2 for l in range(input_dim)]]
+        kernel = get_kernel(kernel, input_dim, 
+                            lengthscale, use_gpu, 
+                            amplitude=kwargs.get('amplitude'))
         self.fulldims = Xtest.shape[1:]
         self.Xtest = gprutils.prepare_test_data(Xtest)
         if use_gpu:
@@ -255,7 +263,7 @@ class reconstructor:
         pass
 
 
-def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
+def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
     """
     Initalizes one of the following kernels:
     RBF, Rational Quadratic, Matern, Periodic kernel
@@ -266,38 +274,34 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
         input_dim: int
             number of input dimensions
             (equal to number of feature vector columns)
-        on_gpu: bool
+        lengthscale: list of two lists
+            determines lower (1st list) and upper (2nd list) bounds
+            for kernel lengthscale(s).
+            number of elements in each list is equal to the input dimensions
+        use_gpu: bool
             sets default tensor type to torch.cuda.DoubleTensor
 
     **Kwargs:
-        lengthscale: list of two lists
-            determines lower (1st list) and upper (2nd list) bounds
-            for kernel lengthscale(s) (default is from 0.1 to 20);
-            number of elements in each list is equal to the input dimensions
         amplitude: list with two floats
             determines bounds on kernel amplitude parameter
             (default is from 1e-4 to 10)
-        len_dim: int
-            number of lengthscale tensor dimensions
-            (allows using only one lengthscale for >1D feature vector)
 
     Returns:
-        kernel object
+        Pyro kernel object
     """
-    if on_gpu and torch.cuda.is_available():
+    if use_gpu and torch.cuda.is_available():
         torch.set_default_tensor_type(torch.cuda.DoubleTensor)
     else:
         torch.set_default_tensor_type(torch.DoubleTensor)
 
-    amp = kwargs.get('amplitude') if 'amplitude' in kwargs else [1e-4, 10.]
-    len_dim = kwargs.get('len_dim') if 'len_dim' in kwargs else input_dim
-    lscale = kwargs.get('lengthscale')
-    if lscale is None:
-        lscale = [[1. for l in range(len_dim)], [20. for l in range(len_dim)]]
+    amp = kwargs.get('amplitude')
+    lscale = lengthscale
+    amp = [1e-4, 10.] if amp is None else amp
+    # Needed in Pyro < 1.0.0  
     lscale_ = torch.tensor(lscale[0]) + 1e-5
 
     # initialize the kernel
-    kernel_book = lambda input_dim, len_dim: {
+    kernel_book = lambda input_dim: {
         'RBF': gp.kernels.RBF(
             input_dim, lengthscale=lscale_
             ),
@@ -310,7 +314,7 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
     }
 
     try:
-        kernel = kernel_book(input_dim, len_dim)[kernel_type]
+        kernel = kernel_book(input_dim)[kernel_type]
     except KeyError:
         print('Select one of the currently available kernels:',\
               '"RBF", "RationalQuadratic", "Matern52"')
