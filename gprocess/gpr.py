@@ -8,6 +8,7 @@ import torch
 import pyro
 import pyro.contrib.gp as gp
 import pyro.distributions as dist
+import warnings
 
 
 class reconstructor:
@@ -123,9 +124,9 @@ class reconstructor:
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
             loss.backward()
             optimizer.step()
-            self.lscales.append(self.sgpr.kernel.lengthscale.tolist())
+            self.lscales.append(self.sgpr.kernel.lengthscale_map.tolist())
+            self.amp_all.append(self.sgpr.kernel.variance_map.item())
             self.noise_all.append(self.sgpr.noise.item())
-            self.amp_all.append(self.sgpr.kernel.variance.item())
             self.indpoints_all.append(self.sgpr.Xu.detach().cpu().numpy())
             if self.verbose and (i % 100 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
@@ -140,8 +141,8 @@ class reconstructor:
             np.round(time.time() - start_time, 2)))
         print('Final parameter values:\n',
               'amp: {}, lengthscale: {}, noise: {}'.format(
-                np.around(self.sgpr.kernel.variance.item(), 4),
-                np.around(self.sgpr.kernel.lengthscale.tolist(), 4),
+                np.around(self.sgpr.kernel.variance_map.item(), 4),
+                np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
                 np.around(self.sgpr.noise.item(), 7)))
         return
 
@@ -314,22 +315,25 @@ def get_kernel(kernel_type='RBF', input_dim=3, on_gpu=False, **kwargs):
         print('Select one of the currently available kernels:',\
               '"RBF", "RationalQuadratic", "Matern52"')
         raise
-
-    # set priors
-    kernel.set_prior(
-        "variance",
-        dist.Uniform(
-            torch.tensor(amp[0]),
-            torch.tensor(amp[1])
+        
+    with warnings.catch_warnings():  # TODO: use PyroSample to set priors
+        warnings.filterwarnings("ignore", category=UserWarning)
+        
+        # set priors
+        kernel.set_prior(
+            "variance",
+            dist.Uniform(
+                torch.tensor(amp[0]),
+                torch.tensor(amp[1])
+            )
         )
-    )
-    kernel.set_prior(
-        "lengthscale",
-        dist.Uniform(
-            torch.tensor(lscale[0]),
-            torch.tensor(lscale[1])
-        ).independent()
-    )
+        kernel.set_prior(
+            "lengthscale",
+            dist.Uniform(
+                torch.tensor(lscale[0]),
+                torch.tensor(lscale[1])
+            ).independent()
+        )
 
     return kernel
 
