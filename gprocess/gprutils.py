@@ -5,6 +5,8 @@ import os
 import copy
 import numpy as np
 import torch
+from torch.distributions import transform_to, constraints
+import torch.distributions as dist
 import pyro
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -194,6 +196,37 @@ def get_grid_indices(R, dense_x=1.):
     else:
         raise NotImplementedError("Currently works only for 2D and 3D numpy arrays")
     return X_grid
+
+
+def to_constrained_interval(state_dict, lscale, amp):
+    """
+    Transforms kernel's unconstrained lenghscale and variance
+    to their constrained domains (intervals)
+
+    Args:
+        state_dict: dict
+            kernel's state dictionary;
+            can be obtained from self.spgr.kernel.state_dict
+        lscale: list
+            list of two lists with lower and upper bound(s)
+            for lenghtscale prior. Number of elements in each list
+            is usually equal to the number of (independent) input dimensions
+        amp: list
+            list with two floats corresponding to lower and upper
+            bounds for variance (square of amplitude) prior
+
+    Returns:
+        Lengthscale and variance in the constrained domain (interval)
+    """
+    l_ = state_dict()['lenghtscale_map_unconstrained']
+    a_ = state_dict()['variance_map_unconstrained']
+    l_interval = constraints.interval(
+        torch.tensor(lscale[0]), torch.tensor(lscale[1]))
+    a_interval = constraints.interval(
+        torch.tensor(amp[0]), torch.tensor(amp[1]))
+    l = transform_to(l_interval)(l_)
+    a = transform_to(a_interval)(a_)
+    return l, a
 
 
 def corrupt_data_xy(X_true, R_true, prob=0.5, replace_w_zeros=False):
