@@ -22,6 +22,8 @@ class reconstructor:
             For example, for xyz coordinates, c = 3.
         y: N x M x L or N x M ndarray
             Observations (data points)
+        X_test: N x M x L or N x M ndarray
+            "Test" points (for prediction with a trained GP model)
         kernel: str
             kernel type
         lengthscale: list of two lists
