@@ -29,16 +29,13 @@ parser.add_argument("--LENGTH_CONSTR_MAX", nargs="?", default=20, type=int)
 parser.add_argument("--LEARNING_RATE", nargs="?", default=0.1, type=float,
                     help="Learning rate for each exploration step" +
                     "(decrease if it becomes unstable)")
-parser.add_argument("--INDUCING_POINTS_RATIO", nargs="?", default=50, type=int,
+parser.add_argument("--INDUCING_POINTS_RATIO", nargs="?", default=20, type=int,
                     help="ratio of total number of data points" +
                     "to number of inducing points")
 parser.add_argument("--NORMALIZE", nargs="?", default=1, type=int,
                     help="Normalizes to [0, 1]. 1 is True, 0 is False")
 parser.add_argument("--STEPS", nargs="?", default=1000, type=int,
                     help="Number of SVI steps during model training")
-parser.add_argument("--PROB", nargs="?", default=0.95, type=float,
-                    help="Value between 0 and 1." +
-                    "Controls number of data points to be removed.")
 parser.add_argument("--USE_GPU", nargs="?", default=1, type=int,
                     help="1 for using GPU, 0 for running on CPU")
 parser.add_argument("--SAVEDIR", nargs="?", default="Output", type=str,
@@ -57,9 +54,11 @@ X_true = np.array([c1, c2, c3])
 # Edge regions not considered for max uncertainty evaluation
 dist_edge = [R_true.shape[0] // 10, R_true.shape[1] // 10]
 # Make initial set of measurements for exploration analysis.
-# In real experiment we measure ~5 % of grid at random points
-# Here we achieve this by removing 95 % of the "ground truth" data
-X, R = gprutils.corrupt_data_xy(X_true, R_true, args.PROB)
+# Let's start with "opening" several points along each edge
+R = R_true*0
+R[R==0] = np.nan
+R = gprutils.open_edge_points(R, R_true)
+X, R = gprutils.corrupt_data_xy(X_true, R)
 # Construct lengthscale constraints for all 3 dimensions
 LENGTH_CONSTR = [
                  [float(args.LENGTH_CONSTR_MIN) for i in range(3)],
@@ -74,7 +73,7 @@ for i in range(args.ESTEPS):
     # Make the number of inducing points dependent on the number of datapoints
     indpoints = len(gprutils.prepare_training_data(X, R)[0]) // indpts_r
     # clip to make sure it fits into GPU memory
-    indpoints = 1500 if indpoints > 1500 else indpoints
+    indpoints = 2000 if indpoints > 2000 else indpoints
     # Initialize explorer
     bexplorer = gpr.reconstructor(
         X, R, X_true, args.KERNEL, LENGTH_CONSTR,
