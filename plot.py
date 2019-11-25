@@ -25,7 +25,7 @@ if np.ndim(R) == 2:
 if np.ndim(R) == 3:
     slice_number = int(input(
         "Enter a slice number between 0 and {}: ".format(R.shape[-1])))
-    pos = np.array(input("Enter xy positions for spectroscopic curves" +
+    pos = np.array(input("Enter xy positions for spectroscopic curves " +
                    "to display (x1 y1 x2 y2 ...): ").split(), dtype=np.int)
     pos_x = pos[0::2]
     pos_y = pos[1::2]
