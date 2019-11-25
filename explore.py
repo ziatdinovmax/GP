@@ -21,7 +21,7 @@ parser.add_argument("FILEPATH", nargs="?", type=str,
                     help="Provide 3D numpy array of spectroscopic data")
 parser.add_argument("--ESTEPS", nargs="?", default=65, type=int,
                     help="Number of exploration steps")
-parser.add_argument("--MSIZE", nargs="?", default=1, type=int,
+parser.add_argument("--MSIZE", nargs="?", default=0, type=int,
                     help="Size of measurements (2*MSIZE+1)")
 parser.add_argument("--KERNEL", nargs="?", default="Matern52", type=str)
 parser.add_argument("--LENGTH_CONSTR_MIN", nargs="?", default=1, type=int)
@@ -34,7 +34,7 @@ parser.add_argument("--INDUCING_POINTS_RATIO", nargs="?", default=20, type=int,
                     "to number of inducing points")
 parser.add_argument("--NORMALIZE", nargs="?", default=1, type=int,
                     help="Normalizes to [0, 1]. 1 is True, 0 is False")
-parser.add_argument("--STEPS", nargs="?", default=1000, type=int,
+parser.add_argument("--STEPS", nargs="?", default=500, type=int,
                     help="Number of SVI steps during model training")
 parser.add_argument("--USE_GPU", nargs="?", default=1, type=int,
                     help="1 for using GPU, 0 for running on CPU")
@@ -51,14 +51,13 @@ if args.NORMALIZE and np.isnan(R_true).any() is False:
 e1, e2, e3 = R_true.shape
 c1, c2, c3 = np.mgrid[:e1:1., :e2:1., :e3:1.]
 X_true = np.array([c1, c2, c3])
-# Edge regions not considered for max uncertainty evaluation
-dist_edge = [R_true.shape[0] // 10, R_true.shape[1] // 10]
 # Make initial set of measurements for exploration analysis.
 # Let's start with "opening" several points along each edge
 R = R_true*0
 R[R==0] = np.nan
 R = gprutils.open_edge_points(R, R_true)
 X, R = gprutils.corrupt_data_xy(X_true, R)
+dist_edge = [0, 0] # set to non-zero vals when edge points are not "opened"
 # Construct lengthscale constraints for all 3 dimensions
 LENGTH_CONSTR = [
                  [float(args.LENGTH_CONSTR_MIN) for i in range(3)],
