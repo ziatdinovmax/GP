@@ -13,7 +13,10 @@ import warnings
 
 class reconstructor:
     """
-    Class for uncertainty exploration in datacubes with GP regression
+    Class for Gaussian process regression-based reconstuction
+    of sparse 2D image and 3D spectroscopic datasets, 
+    and sample exploration with hyperspectral measurements
+    based on maximal uncertainty reduction
 
     Args:
         X:  c x  N x M x L or c x N x M ndarray
@@ -221,7 +224,7 @@ class reconstructor:
     def step(self, dist_edge, **kwargs):
         """
         Performs single train-predict step for exploration analysis
-        returning new point with maximum uncertainty
+        returning a new point with maximum uncertainty
 
         Args:
             dist_edge: list with two integers
@@ -268,7 +271,7 @@ class reconstructor:
 def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
     """
     Initalizes one of the following kernels:
-    RBF, Rational Quadratic, Matern, Periodic kernel
+    RBF, Rational Quadratic, Matern
 
     Args:
         kernel_type: str
