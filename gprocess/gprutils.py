@@ -1,5 +1,7 @@
-# Utility functions
-# Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
+'''
+Utility functions for the analysis of sparse image and hyperspectral data with Gaussian processes.
+Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
+'''
 
 import os
 import copy
