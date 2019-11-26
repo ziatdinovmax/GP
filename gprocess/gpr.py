@@ -1,5 +1,11 @@
-# GPR model training and prediction
-# Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
+'''
+GPR model training and prediction
+Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
+
+Serves as a high-level wrapper for Gaussian processes module 
+from Pyro probabilistic programming library (https://pyro.ai/)
+for easy work with scientific image (2D) and hyperspectral (3D, 4D) data.
+'''
 
 import time
 import numpy as np
