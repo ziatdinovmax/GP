@@ -1,5 +1,12 @@
-# GPR model with structured kernel interpolation: training and prediction
-# Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
+'''
+GPR model with structured kernel interpolation: training and prediction
+Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
+
+Serves as a high-level wrapper for GPyTorch's (https://gpytorch.ai) 
+Gaussian processes module with a structred kernel interpolation method
+for easy work with scientific image (2D) and hyperspectral (3D, 4D) data. 
+WORK IN PROGRESS. More details TBA
+'''
 
 import numpy as np
 from gprocess import gprutils
