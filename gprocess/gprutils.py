@@ -25,7 +25,7 @@ def max_uncertainty(sd, dist_edge):
             edge regions not considered for max uncertainty evaluation
 
     Returns:
-        list of indices corresponding to the max uncertainty point
+        lists of indices and values corresponding to the first 100 uncertainty points
     """
     # sum along the last dimension
     sd = np.sum(sd, axis=-1)
