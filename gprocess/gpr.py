@@ -246,7 +246,8 @@ class reconstructor:
                 number of batches for splitting the Xtest array
 
         Returns:
-            list indices of point with maximum uncertainty
+            list of indices and corresponding values for points 
+            with maximum uncertainty, predictive mean and SD (as flattened arrays)
 
         """
         if kwargs.get("learning_rate") is not None:
