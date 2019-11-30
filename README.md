@@ -1,5 +1,5 @@
 # GP
-Gaussian processes (GP) for 2D and hyperspectral microscopy data analysis and measurements based on [Pyro](https://pyro.ai/) probabilistic programming language. To use it, first run:
+Gaussian processes (GP) for 2D and hyperspectral microscopy data analysis and measurements based on [Pyro](https://pyro.ai/) probabilistic programming language. See also our paper at https://arxiv.org/abs/1911.11348. To use it, first run:
 
 ```
 git clone https://github.com/ziatdinovmax/GP.git
