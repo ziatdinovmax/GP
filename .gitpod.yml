@@ -1,6 +1,4 @@
 image:
-  file: Dockerfile
-tasks:
-  -init: python -m pip install flake8
+  file: Dockerfile 
 ports:
-- port: 8080
+ - port: 8080
