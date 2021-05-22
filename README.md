@@ -1,6 +1,6 @@
 **This repo will now be developed and maintained https://github.com/ziatdinovmax/GPim**
 
-# GP
+# GP (Archieved)
 Gaussian processes (GP) for 2D and hyperspectral microscopy data analysis and measurements based on [Pyro](https://pyro.ai/) probabilistic programming language. See also our paper at https://arxiv.org/abs/1911.11348. 
 
 To use it, first run:
